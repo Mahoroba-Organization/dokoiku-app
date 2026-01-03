@@ -13,7 +13,7 @@ type ScoredShop = {
     baseScore: number;
     finalScore: number;
     penaltyApplied: boolean;
-    voteCounts: { super_yes: number; like: number; no: number };
+    voteCount: number;
 };
 
 export default function ResultPage() {
@@ -77,9 +77,7 @@ export default function ResultPage() {
                                 {shop.penaltyApplied && <span className="text-xs text-red-500 ml-1">(減点あり)</span>}
                             </div>
                             <div className="flex space-x-2 text-xs text-gray-500">
-                                <span>😍 {shop.voteCounts.super_yes}</span>
-                                <span>👍 {shop.voteCounts.like}</span>
-                                <span>🤔 {shop.voteCounts.no}</span>
+                                <span>🗳️ {shop.voteCount}票</span>
                             </div>
                         </div>
                     </div>

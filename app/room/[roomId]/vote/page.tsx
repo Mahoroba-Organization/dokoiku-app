@@ -160,7 +160,12 @@ export default function VotePage() {
             {/* Header & Progress */}
             <header className="bg-white p-4 shadow-sm z-10">
                 <div className="flex justify-between items-center mb-2">
-                    <h1 className="font-bold text-gray-700">お店を選んでね</h1>
+                    <button
+                        onClick={() => router.push(`/room/${roomId}/join`)}
+                        className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center bg-gray-100 px-3 py-1 rounded-lg"
+                    >
+                        ← ルームへ
+                    </button>
                     <span className="text-sm font-medium text-blue-600">{currentIndex + 1} / {shops.length}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">

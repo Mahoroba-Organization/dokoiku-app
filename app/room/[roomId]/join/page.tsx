@@ -12,10 +12,20 @@ export default async function JoinPage({ params }: { params: Promise<{ roomId: s
 
                     <Link
                         href={`/room/${roomId}/vote`}
-                        className="block w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl shadow transition-transform transform active:scale-95"
+                        className="block w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl shadow transition-transform transform active:scale-95 mb-4"
                     >
                         参加して投票へ
                     </Link>
+
+                    <div className="pt-4 border-t border-gray-100">
+                        <Link
+                            href={`/room/${roomId}/result`}
+                            className="block w-full bg-black hover:bg-gray-800 text-white font-bold py-3 px-6 rounded-xl shadow transition-transform transform active:scale-95"
+                        >
+                            集計を開始する
+                        </Link>
+                        <p className="text-center text-xs text-gray-400 mt-2">全員の投票が終わったら押してください</p>
+                    </div>
                 </div>
             </main>
         </div>
