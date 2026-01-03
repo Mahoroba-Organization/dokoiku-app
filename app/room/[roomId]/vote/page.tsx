@@ -11,6 +11,7 @@ export default function VotePage() {
     const [loading, setLoading] = useState(true);
     const [userId, setUserId] = useState('');
     const [votes, setVotes] = useState<Record<string, string>>({});
+    const [currentIndex, setCurrentIndex] = useState(0);
 
     useEffect(() => {
         // Generate a random userId if not exists
@@ -20,13 +21,6 @@ export default function VotePage() {
             localStorage.setItem('dokoiku_userId', storedUserId);
         }
         setUserId(storedUserId);
-
-        // Fetch room data
-        // Since we can't easily share the server-side 'rooms' store with client component directly
-        // without an API, we'll create a GET API for room details or pass it as props.
-        // For now, let's refactor to fetch from an API route we'll create, or pass initial data.
-        // To keep it simple and consistent with the "client-side interaction" requirement,
-        // let's fetch from a new GET endpoint.
 
         fetch(`/api/rooms/${roomId}`)
             .then(res => {
@@ -47,6 +41,11 @@ export default function VotePage() {
         // Optimistic update
         setVotes(prev => ({ ...prev, [shopId]: voteType }));
 
+        // Advance to next shop locally
+        setTimeout(() => {
+            setCurrentIndex(prev => prev + 1);
+        }, 300); // Small delay for visual feedback
+
         try {
             await fetch(`/api/rooms/${roomId}/vote`, {
                 method: 'POST',
@@ -55,7 +54,6 @@ export default function VotePage() {
             });
         } catch (error) {
             console.error('Vote failed', error);
-            // Revert on failure (optional, keeping simple for now)
         }
     };
 
@@ -71,63 +69,96 @@ export default function VotePage() {
         );
     }
 
+    // Completion Screen
+    if (currentIndex >= shops.length) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4 text-center">
+                <div className="bg-white p-8 rounded-2xl shadow-lg max-w-sm w-full space-y-6">
+                    <div className="text-6xl mb-4">🎉</div>
+                    <h2 className="text-2xl font-bold text-gray-900">投票完了！</h2>
+                    <p className="text-gray-600">お疲れ様でした。<br />みんなの投票が終わるまでお待ちください。</p>
+
+                    <button
+                        onClick={() => router.push(`/room/${roomId}/result`)}
+                        className="w-full bg-black text-white py-4 rounded-xl font-bold shadow-lg transform transition active:scale-95"
+                    >
+                        結果を見る
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    const shop = shops[currentIndex];
+    const progress = Math.round(((currentIndex) / shops.length) * 100);
+
     return (
-        <div className="min-h-screen bg-gray-50 p-4 pb-24">
-            <header className="sticky top-0 bg-white/80 backdrop-blur-md p-4 -mx-4 mb-6 border-b border-gray-100 z-10">
-                <h1 className="text-lg font-bold text-center">候補のお店 ({shops.length}件)</h1>
-                <p className="text-xs text-center text-gray-500">直感で選んでね！</p>
+        <div className="min-h-screen bg-gray-100 flex flex-col">
+            {/* Header & Progress */}
+            <header className="bg-white p-4 shadow-sm z-10">
+                <div className="flex justify-between items-center mb-2">
+                    <h1 className="font-bold text-gray-700">お店を選んでね</h1>
+                    <span className="text-sm font-medium text-blue-600">{currentIndex + 1} / {shops.length}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${progress}%` }}
+                    ></div>
+                </div>
             </header>
 
-            <main className="space-y-6 max-w-md mx-auto">
-                {shops.map((shop: any) => (
-                    <div key={shop.id} className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
-                        <div className="h-40 bg-gray-200 w-full object-cover flex items-center justify-center text-gray-400 overflow-hidden">
-                            {shop.photo?.pc?.l ? (
-                                <img src={shop.photo.pc.l} alt={shop.name} className="w-full h-full object-cover" />
-                            ) : (
-                                <span>No Image</span>
-                            )}
-                        </div>
-                        <div className="p-4">
-                            <h2 className="font-bold text-xl mb-1">{shop.name}</h2>
-                            <p className="text-sm text-gray-500 mb-4">{shop.access} / {shop.budget?.name}</p>
-
-                            <div className="grid grid-cols-3 gap-2">
-                                <button
-                                    onClick={() => handleVote(shop.id, 'super_yes')}
-                                    className={`flex flex-col items-center justify-center p-2 rounded-lg transition-colors ${votes[shop.id] === 'super_yes' ? 'bg-red-100 ring-2 ring-red-400' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}
-                                >
-                                    <span className="text-2xl mb-1">😍</span>
-                                    <span className="text-xs font-bold">超アリ</span>
-                                </button>
-                                <button
-                                    onClick={() => handleVote(shop.id, 'like')}
-                                    className={`flex flex-col items-center justify-center p-2 rounded-lg transition-colors ${votes[shop.id] === 'like' ? 'bg-blue-100 ring-2 ring-blue-400' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
-                                >
-                                    <span className="text-2xl mb-1">👍</span>
-                                    <span className="text-xs font-bold">いいね</span>
-                                </button>
-                                <button
-                                    onClick={() => handleVote(shop.id, 'no')}
-                                    className={`flex flex-col items-center justify-center p-2 rounded-lg transition-colors ${votes[shop.id] === 'no' ? 'bg-gray-200 ring-2 ring-gray-400' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
-                                >
-                                    <span className="text-2xl mb-1">🤔</span>
-                                    <span className="text-xs font-bold">なし</span>
-                                </button>
-                            </div>
+            {/* Main Card Area */}
+            <main className="flex-1 flex flex-col p-4 max-w-md mx-auto w-full h-full justify-center">
+                <div key={shop.id} className="bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-100 flex flex-col h-[70vh]">
+                    <div className="h-1/2 bg-gray-200 relative">
+                        {shop.photo?.pc?.l ? (
+                            <img src={shop.photo.pc.l} alt={shop.name} className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400">No Image</div>
+                        )}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+                            <h2 className="text-white font-bold text-2xl leading-tight shadow-sm">{shop.name}</h2>
+                            <p className="text-white/90 text-sm mt-1">{shop.genre?.name} / {shop.budget?.name}</p>
                         </div>
                     </div>
-                ))}
-            </main>
 
-            <div className="fixed bottom-6 left-0 right-0 px-4 flex justify-center">
-                <button
-                    onClick={() => router.push(`/room/${roomId}/result`)}
-                    className="bg-black text-white px-8 py-3 rounded-full shadow-xl font-bold text-sm"
-                >
-                    結果を見る
-                </button>
-            </div>
+                    <div className="flex-1 p-6 flex flex-col justify-between">
+                        <div className="space-y-2">
+                            <p className="text-gray-600 text-sm flex items-start">
+                                <span className="mr-2">📍</span> {shop.access}
+                            </p>
+                            <p className="text-gray-600 text-sm flex items-start">
+                                <span className="mr-2">🕒</span> {shop.open}
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-3 mt-4">
+                            <button
+                                onClick={() => handleVote(shop.id, 'no')}
+                                className="flex flex-col items-center justify-center p-4 rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+                            >
+                                <span className="text-3xl mb-1">🤔</span>
+                                <span className="text-xs font-bold">なし</span>
+                            </button>
+                            <button
+                                onClick={() => handleVote(shop.id, 'like')}
+                                className="flex flex-col items-center justify-center p-4 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                            >
+                                <span className="text-3xl mb-1">👍</span>
+                                <span className="text-xs font-bold">いいね</span>
+                            </button>
+                            <button
+                                onClick={() => handleVote(shop.id, 'super_yes')}
+                                className="flex flex-col items-center justify-center p-4 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                            >
+                                <span className="text-3xl mb-1">😍</span>
+                                <span className="text-xs font-bold">超アリ</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
         </div>
     );
 }
