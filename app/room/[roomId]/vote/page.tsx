@@ -194,9 +194,6 @@ export default function VotePage() {
                         <div>
                             <p className="text-gray-600 text-sm mb-1">{shop.genre?.name}</p>
                             <p className="text-gray-900 font-bold mb-4">{shop.budget?.name}</p>
-                            <p className="text-gray-500 text-xs flex items-start">
-                                <span className="mr-2">📍</span> {shop.access}
-                            </p>
                         </div>
 
                         {/* Slider UI */}
