@@ -11,6 +11,15 @@ export type RoomData = {
     shops: any[];
     votes: RoomVotes;
     participants: string[];
+    // Explore-Exploit Algorithm Fields
+    rankHistory?: Array<{
+        timestamp: number;
+        top1ShopId: string;
+        top2ShopId: string;
+        scoreDiff: number;
+    }>;
+    isDecided?: boolean;
+    decidedShopId?: string;
 };
 
 const ROOM_TTL = 60 * 60 * 24; // 24 hours

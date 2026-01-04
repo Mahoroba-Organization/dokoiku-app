@@ -7,17 +7,17 @@ export default function VotePage() {
     const params = useParams();
     const roomId = params.roomId as string;
     const router = useRouter();
-    const [shops, setShops] = useState<any[]>([]);
+    const [currentShop, setCurrentShop] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
     const [userId, setUserId] = useState('');
-    const [votes, setVotes] = useState<Record<string, number>>({});
-    const [currentIndex, setCurrentIndex] = useState(0);
+    const [progress, setProgress] = useState({ evaluated: 0, total: 0, isDecided: false });
 
     // Slider State
     const [score, setScore] = useState(50);
     const [isDragging, setIsDragging] = useState(false);
     const sliderRef = useRef<HTMLDivElement>(null);
 
+    // Initialize userId
     useEffect(() => {
         let storedUserId = localStorage.getItem('dokoiku_userId');
         if (!storedUserId) {
@@ -25,41 +25,61 @@ export default function VotePage() {
             localStorage.setItem('dokoiku_userId', storedUserId);
         }
         setUserId(storedUserId);
+    }, []);
 
-        fetch(`/api/rooms/${roomId}`)
-            .then(res => {
-                if (!res.ok) throw new Error('Room not found');
-                return res.json();
-            })
-            .then(data => {
-                setShops(data.shops);
-                setLoading(false);
-            })
-            .catch(err => {
-                console.error(err);
-                setLoading(false);
-            });
-    }, [roomId]);
+    // Fetch next shop
+    const fetchNextShop = async () => {
+        if (!userId) return;
 
-    // Reset score when moving to next shop
+        setLoading(true);
+        try {
+            const res = await fetch(`/api/rooms/${roomId}/next-shop?userId=${userId}`);
+            const data = await res.json();
+
+            setProgress(data.progress);
+
+            if (data.shop) {
+                setCurrentShop(data.shop);
+                setScore(50); // Reset score for new shop
+            } else {
+                // No more shops or decided
+                setCurrentShop(null);
+            }
+        } catch (error) {
+            console.error('Failed to fetch next shop:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Fetch initial shop when userId is ready
     useEffect(() => {
-        setScore(50);
-    }, [currentIndex]);
+        if (userId) {
+            fetchNextShop();
+        }
+    }, [userId, roomId]);
 
     const handleVote = async (shopId: string, finalScore: number) => {
-        setVotes(prev => ({ ...prev, [shopId]: finalScore }));
-
-        // Advance to next shop locally with delay
-        setTimeout(() => {
-            setCurrentIndex(prev => prev + 1);
-        }, 300);
-
         try {
-            await fetch(`/api/rooms/${roomId}/vote`, {
+            const res = await fetch(`/api/rooms/${roomId}/vote`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId, shopId, score: finalScore }),
             });
+
+            const data = await res.json();
+
+            // Check if auto-decided
+            if (data.isDecided) {
+                setProgress(prev => ({ ...prev, isDecided: true }));
+                setCurrentShop(null);
+                return;
+            }
+
+            // Fetch next shop after short delay
+            setTimeout(() => {
+                fetchNextShop();
+            }, 300);
         } catch (error) {
             console.error('Vote failed', error);
         }
@@ -88,11 +108,9 @@ export default function VotePage() {
     };
 
     const handleMouseUp = () => {
-        if (isDragging) {
+        if (isDragging && currentShop) {
             setIsDragging(false);
-            if (shops[currentIndex]) {
-                handleVote(shops[currentIndex].id, score);
-            }
+            handleVote(currentShop.id, score);
         }
     };
 
@@ -106,9 +124,9 @@ export default function VotePage() {
     };
 
     const handleTouchEnd = () => {
-        setIsDragging(false);
-        if (shops[currentIndex]) {
-            handleVote(shops[currentIndex].id, score);
+        if (currentShop) {
+            setIsDragging(false);
+            handleVote(currentShop.id, score);
         }
     };
 
@@ -119,27 +137,28 @@ export default function VotePage() {
         return () => {
             window.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDragging, currentIndex, score]); // Dependencies for closure capture
+    }, [isDragging, currentShop, score]);
 
-    if (loading) {
+    if (loading && !currentShop) {
         return <div className="min-h-screen flex items-center justify-center bg-gray-50">読み込み中...</div>;
     }
 
-    if (!shops || shops.length === 0) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <p className="text-gray-500">お店が見つかりません</p>
-            </div>
-        );
-    }
+    // Completion screen
+    if (!currentShop) {
+        const message = progress.isDecided
+            ? '自動決定されました！'
+            : '全ての店舗を評価しました！';
 
-    if (currentIndex >= shops.length) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4 text-center">
                 <div className="bg-white p-8 rounded-2xl shadow-lg max-w-sm w-full space-y-6">
                     <div className="text-6xl mb-4">🎉</div>
-                    <h2 className="text-2xl font-bold text-gray-900">投票完了！</h2>
-                    <p className="text-gray-600">お疲れ様でした。<br />みんなの投票が終わるまでお待ちください。</p>
+                    <h2 className="text-2xl font-bold text-gray-900">{message}</h2>
+                    <p className="text-gray-600">
+                        {progress.isDecided
+                            ? '最適な店舗が決定しました。結果をご確認ください。'
+                            : 'みんなの投票が終わるまでお待ちください。'}
+                    </p>
 
                     <button
                         onClick={() => router.push(`/room/${roomId}/result`)}
@@ -147,13 +166,19 @@ export default function VotePage() {
                     >
                         結果を見る
                     </button>
+
+                    <button
+                        onClick={() => router.push(`/room/${roomId}/join`)}
+                        className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl font-medium transform transition active:scale-95"
+                    >
+                        ← ルームへ
+                    </button>
                 </div>
             </div>
         );
     }
 
-    const shop = shops[currentIndex];
-    const progress = Math.round(((currentIndex) / shops.length) * 100);
+    const progressPercent = progress.total > 0 ? Math.round((progress.evaluated / progress.total) * 100) : 0;
 
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col select-none">
@@ -166,34 +191,34 @@ export default function VotePage() {
                     >
                         ← ルームへ
                     </button>
-                    <span className="text-sm font-medium text-blue-600">{currentIndex + 1} / {shops.length}</span>
+                    <span className="text-sm font-medium text-blue-600">{progress.evaluated} / {progress.total}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
                         className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${progress}%` }}
+                        style={{ width: `${progressPercent}%` }}
                     ></div>
                 </div>
             </header>
 
             {/* Main Card Area */}
             <main className="flex-1 flex flex-col p-4 max-w-md mx-auto w-full h-full justify-center">
-                <div key={shop.id} className="bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-100 flex flex-col h-[75vh]">
+                <div key={currentShop.id} className="bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-100 flex flex-col h-[75vh]">
                     <div className="h-2/5 bg-gray-200 relative">
-                        {shop.photo?.pc?.l ? (
-                            <img src={shop.photo.pc.l} alt={shop.name} className="w-full h-full object-cover" />
+                        {currentShop.photo?.pc?.l ? (
+                            <img src={currentShop.photo.pc.l} alt={currentShop.name} className="w-full h-full object-cover" />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center text-gray-400">No Image</div>
                         )}
                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
-                            <h2 className="text-white font-bold text-2xl leading-tight shadow-sm">{shop.name}</h2>
+                            <h2 className="text-white font-bold text-2xl leading-tight shadow-sm">{currentShop.name}</h2>
                         </div>
                     </div>
 
                     <div className="flex-1 p-6 flex flex-col justify-between">
                         <div>
-                            <p className="text-gray-600 text-sm mb-1">{shop.genre?.name}</p>
-                            <p className="text-gray-900 font-bold mb-4">{shop.budget?.name}</p>
+                            <p className="text-gray-600 text-sm mb-1">{currentShop.genre?.name}</p>
+                            <p className="text-gray-900 font-bold mb-4">{currentShop.budget?.name}</p>
                         </div>
 
                         {/* Slider UI */}
