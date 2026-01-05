@@ -1,4 +1,5 @@
 import { RoomVotes } from './kv';
+import { normalizeVote } from './vote_stats';
 
 export type Shop = {
     id: string;
@@ -45,10 +46,14 @@ function buildGenreStats(shops: Shop[], votes: RoomVotes): { user: UserGenreStat
 
     Object.entries(votes).forEach(([userId, userVotes]) => {
         if (!userStats[userId]) userStats[userId] = {};
-        Object.entries(userVotes).forEach(([shopId, score]) => {
+        Object.entries(userVotes).forEach(([shopId, entry]) => {
             const shop = shopById.get(shopId);
             const genre = shop?.genre?.name;
-            if (!genre || typeof score !== 'number') return;
+            if (!genre) return;
+
+            const stats = normalizeVote(entry);
+            if (!stats || stats.ng || stats.count === 0) return;
+            const avg = stats.sum / stats.count;
 
             const uStats = ensureStats(userStats[userId], genre);
             const gStats = ensureStats(globalStats, genre);
@@ -56,11 +61,11 @@ function buildGenreStats(shops: Shop[], votes: RoomVotes): { user: UserGenreStat
             uStats.total += 1;
             gStats.total += 1;
 
-            if (score <= NEGATIVE_SCORE_THRESHOLD) {
+            if (avg <= NEGATIVE_SCORE_THRESHOLD) {
                 uStats.neg += 1;
                 gStats.neg += 1;
             }
-            if (score >= POSITIVE_SCORE_THRESHOLD) {
+            if (avg >= POSITIVE_SCORE_THRESHOLD) {
                 uStats.pos += 1;
                 gStats.pos += 1;
             }
@@ -88,7 +93,7 @@ function getWeightForGenre(
     return clamp(userWeight * globalWeight, MIN_GENRE_WEIGHT, MAX_GENRE_WEIGHT);
 }
 
-function pickWeighted<T>(items: T[], weights: number[]): T | null {
+export function pickWeighted<T>(items: T[], weights: number[]): T | null {
     if (items.length === 0) return null;
     const total = weights.reduce((sum, w) => sum + w, 0);
     if (total <= 0) {
@@ -138,4 +143,20 @@ export function selectPairByGenreBias(
     if (!second) return null;
 
     return [first, second];
+}
+
+export function selectSingleByGenreBias(
+    userId: string,
+    candidateShops: Shop[],
+    votes: RoomVotes,
+    allShops: Shop[] = candidateShops
+): Shop | null {
+    if (candidateShops.length === 0) return null;
+    const stats = buildGenreStats(allShops, votes);
+    const weights = candidateShops.map(shop => {
+        const genre = shop.genre?.name;
+        if (!genre) return 1;
+        return getWeightForGenre(userId, genre, stats);
+    });
+    return pickWeighted(candidateShops, weights);
 }

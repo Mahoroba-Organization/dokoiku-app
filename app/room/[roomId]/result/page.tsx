@@ -89,7 +89,6 @@ export default function ResultPage() {
                         <p className="font-bold">⚠️ 注意</p>
                         <p className="text-xs mt-1">
                             不満が出やすい傾向のメンバーが含まれている可能性があります。
-                            そのメンバーが低評価した店は順位を下げています。
                         </p>
                     </div>
                 )}

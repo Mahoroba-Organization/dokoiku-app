@@ -1,8 +1,10 @@
 import Redis from 'ioredis';
+import { NG_SCORE } from './vote_constants';
 
 // Type definitions (reused from store/logic)
 export type VoteType = number;
-export type UserVotes = Record<string, VoteType>; // shopId -> score
+export type VoteEntry = VoteType | { sum: number; count: number; lastScore: number; ng?: boolean };
+export type UserVotes = Record<string, VoteEntry>; // shopId -> vote stats or score
 export type RoomVotes = Record<string, UserVotes>; // userId -> UserVotes
 
 export type RoomData = {
@@ -82,7 +84,7 @@ export async function addVote(roomId: string, userId: string, shopId: string, vo
     if (!room.votes) room.votes = {};
     if (!room.votes[userId]) room.votes[userId] = {};
 
-    room.votes[userId][shopId] = voteType;
+    room.votes[userId][shopId] = updateVoteEntry(room.votes[userId][shopId], voteType);
 
     await saveRoom(roomId, room);
 }
@@ -99,8 +101,32 @@ export async function addVotes(
     if (!room.votes[userId]) room.votes[userId] = {};
 
     votes.forEach(vote => {
-        room.votes[userId][vote.shopId] = vote.score;
+        room.votes[userId][vote.shopId] = updateVoteEntry(room.votes[userId][vote.shopId], vote.score);
     });
 
     await saveRoom(roomId, room);
+}
+
+export function updateVoteEntry(existing: VoteEntry | undefined, score: VoteType): VoteEntry {
+    if (score === NG_SCORE) {
+        return { sum: 0, count: 0, lastScore: score, ng: true };
+    }
+
+    if (typeof existing === 'number') {
+        if (existing === NG_SCORE) {
+            return { sum: score, count: 1, lastScore: score, ng: false };
+        }
+        return { sum: existing + score, count: 2, lastScore: score, ng: false };
+    }
+
+    if (!existing || existing.ng) {
+        return { sum: score, count: 1, lastScore: score, ng: false };
+    }
+
+    return {
+        sum: (existing.sum || 0) + score,
+        count: (existing.count || 0) + 1,
+        lastScore: score,
+        ng: false
+    };
 }

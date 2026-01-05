@@ -1,8 +1,10 @@
 
+import { VoteEntry } from './kv';
+import { normalizeVote } from './vote_stats';
 
 export type VoteScore = number; // 0 to 100
 
-export type UserVotes = Record<string, VoteScore>; // shopId -> score
+export type UserVotes = Record<string, VoteEntry>; // shopId -> score or stats
 export type RoomVotes = Record<string, UserVotes>; // userId -> UserVotes
 
 // Configuration
@@ -10,7 +12,6 @@ export const MIN_VOTES_FOR_A = 3;
 export const A_THRESHOLD = 0.7; // Kept for logic if needed, but logic below changes
 export const A_PENALTY = 50.0; // Penalty score for A's dislike
 export const NEGATIVE_SCORE_THRESHOLD = 25; // Scores <= this are considered "No"
-export const NG_SCORE = -1; // Explicit NG (veto) score
 
 export interface AAnalysisResult {
     aUserId: string | null;
@@ -29,9 +30,12 @@ export function identifyA(votes: RoomVotes): AAnalysisResult {
         let badCount = 0;
         let totalScore = 0;
 
-        Object.values(userVotes).forEach(score => {
-            if (score <= NEGATIVE_SCORE_THRESHOLD) badCount++;
-            totalScore += score;
+        Object.values(userVotes).forEach(entry => {
+            const stats = normalizeVote(entry);
+            if (!stats || stats.ng) return;
+            const avg = stats.count > 0 ? stats.sum / stats.count : 0;
+            if (avg <= NEGATIVE_SCORE_THRESHOLD) badCount++;
+            totalScore += avg;
         });
 
         const negRate = voteCount > 0 ? badCount / voteCount : 0;
@@ -77,14 +81,15 @@ export function calculateShopScores(shops: any[], votes: RoomVotes, aUserId: str
         let aVotedNo = false;
 
         Object.entries(votes).forEach(([userId, userVotes]) => {
-            const score = userVotes[shop.id];
-            if (typeof score === 'number') {
-                totalScore += score;
-                count++;
+            const entry = userVotes[shop.id];
+            const stats = normalizeVote(entry);
+            if (!stats || stats.ng) return;
+            const avg = stats.count > 0 ? stats.sum / stats.count : 0;
+            totalScore += avg;
+            count++;
 
-                if (userId === aUserId && score <= NEGATIVE_SCORE_THRESHOLD) {
-                    aVotedNo = true;
-                }
+            if (userId === aUserId && avg <= NEGATIVE_SCORE_THRESHOLD) {
+                aVotedNo = true;
             }
         });
 
