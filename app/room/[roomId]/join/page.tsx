@@ -1,8 +1,13 @@
 import Link from 'next/link';
 import ShareButton from '@/app/components/ShareButton';
+import { getRoom } from '@/app/lib/kv';
 
 export default async function JoinPage({ params }: { params: Promise<{ roomId: string }> }) {
     const { roomId } = await params;
+    const room = await getRoom(roomId);
+    const votes = room?.votes || {};
+    const totalVotes = Object.values(votes).reduce((sum, userVotes) => sum + Object.keys(userVotes).length, 0);
+    const hasAnyVotes = totalVotes > 0;
     return (
         <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10">
             <div className="w-full max-w-md text-center mb-6">
@@ -19,15 +24,17 @@ export default async function JoinPage({ params }: { params: Promise<{ roomId: s
                         参加して投票へ
                     </Link>
 
-                    <div className="pt-4 border-t border-[#e3eaf7]">
-                        <Link
-                            href={`/room/${roomId}/result`}
-                            className="block w-full border border-[#2f66f6] text-[#2f66f6] font-bold py-3 px-6 rounded-2xl transition-transform transform active:scale-95 text-sm"
-                        >
-                            集計を開始する
-                        </Link>
-                        <p className="text-center text-xs text-[#9aa7c1] mt-2">全員の投票が終わったら押してください</p>
-                    </div>
+                    {hasAnyVotes && (
+                        <div className="pt-4 border-t border-[#e3eaf7]">
+                            <Link
+                                href={`/room/${roomId}/result`}
+                                className="block w-full border border-[#2f66f6] text-[#2f66f6] font-bold py-3 px-6 rounded-2xl transition-transform transform active:scale-95 text-sm"
+                            >
+                                集計を開始する
+                            </Link>
+                            <p className="text-center text-xs text-[#9aa7c1] mt-2">全員の投票が終わったら押してください</p>
+                        </div>
+                    )}
                 </div>
             </main>
             <div className="w-full max-w-md mt-4">
