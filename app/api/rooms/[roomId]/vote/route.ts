@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { addVote, getRoom, saveRoom } from '@/app/lib/kv';
+import { addVote, addVotes, getRoom, saveRoom } from '@/app/lib/kv';
 import { calculateRanking, checkAutoDecision, getParticipantCount, getMinCommon, CONSECUTIVE_ROUNDS } from '@/app/lib/explore_exploit';
 
 export async function POST(
@@ -8,11 +8,27 @@ export async function POST(
 ) {
     const { roomId } = await params;
     const body = await request.json();
-    const { userId, shopId, score } = body;
+    const { userId, shopId, score, votes } = body;
+
+    if (!userId) {
+        return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+    }
+
+    const voteItems: Array<{ shopId: string; score: number }> = Array.isArray(votes)
+        ? votes
+        : (shopId ? [{ shopId, score }] : []);
+
+    if (voteItems.length === 0) {
+        return NextResponse.json({ error: 'votes are required' }, { status: 400 });
+    }
 
     try {
         // 投票を保存
-        await addVote(roomId, userId, shopId, score);
+        if (voteItems.length === 1) {
+            await addVote(roomId, userId, voteItems[0].shopId, voteItems[0].score);
+        } else {
+            await addVotes(roomId, userId, voteItems);
+        }
 
         // 最新のルームデータを取得
         const room = await getRoom(roomId);
@@ -67,4 +83,3 @@ export async function POST(
         return NextResponse.json({ error: 'Failed to vote' }, { status: 500 });
     }
 }
-

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRoom } from '@/app/lib/kv';
-import { getNextShop } from '@/app/lib/explore_exploit';
+import { getNextPair } from '@/app/lib/explore_exploit';
 
 export async function GET(
     request: NextRequest,
@@ -23,7 +23,7 @@ export async function GET(
         // 自動決定済みの場合
         if (room.isDecided) {
             return NextResponse.json({
-                shop: null,
+                pair: null,
                 progress: {
                     evaluated: Object.keys(room.votes[userId] || {}).length,
                     total: room.shops.length,
@@ -33,14 +33,14 @@ export async function GET(
             });
         }
 
-        // 次の店舗を取得
-        const nextShop = getNextShop(userId, room.shops, room.votes);
+        // 次の店舗ペアを取得
+        const nextPair = getNextPair(userId, room.shops, room.votes);
 
         const userVotes = room.votes[userId] || {};
         const evaluatedCount = Object.keys(userVotes).length;
 
         return NextResponse.json({
-            shop: nextShop,
+            pair: nextPair,
             progress: {
                 evaluated: evaluatedCount,
                 total: room.shops.length,

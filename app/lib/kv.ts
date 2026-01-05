@@ -86,3 +86,21 @@ export async function addVote(roomId: string, userId: string, shopId: string, vo
 
     await saveRoom(roomId, room);
 }
+
+export async function addVotes(
+    roomId: string,
+    userId: string,
+    votes: Array<{ shopId: string; score: VoteType }>
+): Promise<void> {
+    const room = await getRoom(roomId);
+    if (!room) throw new Error('Room not found');
+
+    if (!room.votes) room.votes = {};
+    if (!room.votes[userId]) room.votes[userId] = {};
+
+    votes.forEach(vote => {
+        room.votes[userId][vote.shopId] = vote.score;
+    });
+
+    await saveRoom(roomId, room);
+}
