@@ -188,7 +188,6 @@ export default function VotePage() {
                     >
                         ← ルームへ
                     </button>
-                    <span className="text-sm font-medium text-blue-600">{progress.evaluated} / {progress.total}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
