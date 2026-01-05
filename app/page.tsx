@@ -8,16 +8,20 @@ import { useRouter } from 'next/navigation';
 export default function Home() {
   const router = useRouter();
   const [area, setArea] = useState('');
-  const [budget, setBudget] = useState('3000');
+  const [budgetMin, setBudgetMin] = useState('');
+  const [budgetMax, setBudgetMax] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleCreateRoom = async () => {
     setLoading(true);
     try {
+      const minValue = budgetMin ? Number(budgetMin) : undefined;
+      const maxValue = budgetMax ? Number(budgetMax) : undefined;
+
       const res = await fetch('/api/rooms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ area, budget }),
+        body: JSON.stringify({ area, budgetMin: minValue, budgetMax: maxValue }),
       });
 
       if (!res.ok) {
@@ -63,13 +67,22 @@ export default function Home() {
 
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">予算 (円)</label>
-            <input
-              type="number"
-              value={budget}
-              onChange={(e) => setBudget(e.target.value)}
-              placeholder="3000"
-              className="block w-full rounded-lg border-gray-300 bg-gray-50 p-3 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="number"
+                value={budgetMin}
+                onChange={(e) => setBudgetMin(e.target.value)}
+                placeholder="下限"
+                className="block w-full rounded-lg border-gray-300 bg-gray-50 p-3 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+              />
+              <input
+                type="number"
+                value={budgetMax}
+                onChange={(e) => setBudgetMax(e.target.value)}
+                placeholder="上限"
+                className="block w-full rounded-lg border-gray-300 bg-gray-50 p-3 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
           </div>
 
           <button

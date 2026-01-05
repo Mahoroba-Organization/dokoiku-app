@@ -7,7 +7,7 @@ export type RoomVotes = Record<string, UserVotes>; // userId -> UserVotes
 
 export type RoomData = {
     id: string;
-    conditions: { area: string; budget: string };
+    conditions: { area: string; budget?: string; budgetMin?: number; budgetMax?: number };
     shops: any[];
     votes: RoomVotes;
     participants: string[];
