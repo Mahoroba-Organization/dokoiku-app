@@ -179,22 +179,14 @@ export default function VotePage() {
 
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col select-none">
-            {/* Header & Progress */}
-            <header className="bg-white p-4 shadow-sm z-10">
-                <div className="flex justify-between items-center mb-2">
-                    <button
-                        onClick={() => router.push(`/room/${roomId}/join`)}
-                        className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center bg-gray-100 px-3 py-1 rounded-lg"
-                    >
-                        ← ルームへ
-                    </button>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${progressPercent}%` }}
-                    ></div>
-                </div>
+            {/* Header */}
+            <header className="p-4 z-10">
+                <button
+                    onClick={() => router.push(`/room/${roomId}/join`)}
+                    className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center"
+                >
+                    ← ルームへ
+                </button>
             </header>
 
             {/* Main Card Area */}
