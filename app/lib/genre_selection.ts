@@ -3,6 +3,7 @@ import { RoomVotes } from './kv';
 export type Shop = {
     id: string;
     genre?: { name?: string };
+    budget?: { name?: string };
     [key: string]: any;
 };
 
