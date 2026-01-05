@@ -177,7 +177,7 @@ export default function VotePage() {
     };
 
     if (loading && !currentPair) {
-        return <div className="min-h-screen flex items-center justify-center bg-gray-50">読み込み中...</div>;
+        return <div className="min-h-screen flex items-center justify-center">読み込み中...</div>;
     }
 
     // Completion screen
@@ -187,11 +187,11 @@ export default function VotePage() {
             : '全ての店舗を評価しました！';
 
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4 text-center">
-                <div className="bg-white p-8 rounded-2xl shadow-lg max-w-sm w-full space-y-6">
+            <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center">
+                <div className="bg-white/90 p-8 rounded-3xl border border-[#d9e2f4] max-w-sm w-full space-y-6 shadow-[0_18px_45px_-30px_rgba(47,102,246,0.45)]">
                     <div className="text-6xl mb-4">🎉</div>
-                    <h2 className="text-2xl font-bold text-gray-900">{message}</h2>
-                    <p className="text-gray-600">
+                    <h2 className="text-xl font-bold text-[#1c2b52]">{message}</h2>
+                    <p className="text-sm text-[#6b7a99]">
                         {progress.isDecided
                             ? '最適な店舗が決定しました。結果をご確認ください。'
                             : 'みんなの投票が終わるまでお待ちください。'}
@@ -199,14 +199,14 @@ export default function VotePage() {
 
                     <button
                         onClick={() => router.push(`/room/${roomId}/result`)}
-                        className="w-full bg-black text-white py-4 rounded-xl font-bold shadow-lg transform transition active:scale-95"
+                        className="w-full bg-[#2f66f6] text-white py-3 rounded-2xl font-bold shadow-[0_14px_30px_-18px_rgba(47,102,246,0.8)] transform transition active:scale-95 text-sm"
                     >
                         結果を見る
                     </button>
 
                     <button
                         onClick={() => router.push(`/room/${roomId}/join`)}
-                        className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl font-medium transform transition active:scale-95"
+                        className="w-full border border-[#2f66f6] text-[#2f66f6] py-3 rounded-2xl font-medium transform transition active:scale-95 text-sm"
                     >
                         ← ルームへ
                     </button>
@@ -219,12 +219,12 @@ export default function VotePage() {
     const rightShop = currentPair[1];
 
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col select-none">
+        <div className="min-h-screen flex flex-col select-none">
             {/* Header */}
             <header className="p-4 z-10">
                 <button
                     onClick={() => router.push(`/room/${roomId}/join`)}
-                    className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center"
+                    className="text-xs font-semibold text-[#6b7a99] hover:text-[#1c2b52] flex items-center"
                 >
                     ← ルームへ
                 </button>
@@ -233,12 +233,12 @@ export default function VotePage() {
             {/* Main Card Area */}
             <main className="flex-1 flex flex-col p-4 max-w-3xl mx-auto w-full h-full justify-center">
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-100 flex flex-col relative">
-                        <div className="h-44 bg-gray-200 relative">
+                    <div className="bg-white/90 rounded-3xl overflow-hidden border border-[#d9e2f4] flex flex-col relative shadow-[0_18px_45px_-30px_rgba(47,102,246,0.45)]">
+                        <div className="h-44 bg-[#f2f5ff] relative">
                             {leftShop.photo?.pc?.l ? (
                                 <img src={leftShop.photo.pc.l} alt={leftShop.name} className="w-full h-full object-cover" />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-400">No Image</div>
+                                <div className="w-full h-full flex items-center justify-center text-[#9aa7c1]">No Image</div>
                             )}
                             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
                                 <h2 className="text-white font-bold text-lg leading-tight shadow-sm">{leftShop.name}</h2>
@@ -246,21 +246,21 @@ export default function VotePage() {
                         </div>
                         <button
                             onClick={handleNgLeft}
-                            className="absolute right-3 top-3 bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full font-bold shadow-sm"
+                            className="absolute right-3 top-3 border border-[#2f66f6] bg-white text-[#2f66f6] text-xs px-2 py-1 rounded-full font-semibold shadow-sm"
                         >
                             NG
                         </button>
 
                         <div className="flex-1 p-4 flex flex-col justify-between">
                             <div>
-                                <p className="text-gray-600 text-sm mb-1">{leftShop.genre?.name}</p>
-                                <p className="text-gray-900 font-bold mb-4">{leftShop.budget?.name}</p>
+                                <p className="text-[#6b7a99] text-sm mb-1">{leftShop.genre?.name}</p>
+                                <p className="text-[#1c2b52] font-semibold mb-4">{leftShop.budget?.name}</p>
                             </div>
 
                             <div className="space-y-2">
                                 <button
                                     onClick={handlePickLeft}
-                                    className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg transform transition active:scale-95"
+                                    className="w-full bg-[#2f66f6] text-white py-3 rounded-2xl font-bold shadow-[0_14px_30px_-18px_rgba(47,102,246,0.8)] transform transition active:scale-95 text-sm"
                                 >
                                     こっちがいい
                                 </button>
@@ -268,12 +268,12 @@ export default function VotePage() {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-100 flex flex-col relative">
-                        <div className="h-44 bg-gray-200 relative">
+                    <div className="bg-white/90 rounded-3xl overflow-hidden border border-[#d9e2f4] flex flex-col relative shadow-[0_18px_45px_-30px_rgba(47,102,246,0.45)]">
+                        <div className="h-44 bg-[#f2f5ff] relative">
                             {rightShop.photo?.pc?.l ? (
                                 <img src={rightShop.photo.pc.l} alt={rightShop.name} className="w-full h-full object-cover" />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-400">No Image</div>
+                                <div className="w-full h-full flex items-center justify-center text-[#9aa7c1]">No Image</div>
                             )}
                             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
                                 <h2 className="text-white font-bold text-lg leading-tight shadow-sm">{rightShop.name}</h2>
@@ -281,21 +281,21 @@ export default function VotePage() {
                         </div>
                         <button
                             onClick={handleNgRight}
-                            className="absolute right-3 top-3 bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full font-bold shadow-sm"
+                            className="absolute right-3 top-3 border border-[#2f66f6] bg-white text-[#2f66f6] text-xs px-2 py-1 rounded-full font-semibold shadow-sm"
                         >
                             NG
                         </button>
 
                         <div className="flex-1 p-4 flex flex-col justify-between">
                             <div>
-                                <p className="text-gray-600 text-sm mb-1">{rightShop.genre?.name}</p>
-                                <p className="text-gray-900 font-bold mb-4">{rightShop.budget?.name}</p>
+                                <p className="text-[#6b7a99] text-sm mb-1">{rightShop.genre?.name}</p>
+                                <p className="text-[#1c2b52] font-semibold mb-4">{rightShop.budget?.name}</p>
                             </div>
 
                             <div className="space-y-2">
                                 <button
                                     onClick={handlePickRight}
-                                    className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg transform transition active:scale-95"
+                                    className="w-full bg-[#2f66f6] text-white py-3 rounded-2xl font-bold shadow-[0_14px_30px_-18px_rgba(47,102,246,0.8)] transform transition active:scale-95 text-sm"
                                 >
                                     こっちがいい
                                 </button>
@@ -307,13 +307,13 @@ export default function VotePage() {
                 <div className="mt-4 grid grid-cols-2 gap-3">
                     <button
                         onClick={handleBothMeh}
-                        className="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-bold transform transition active:scale-95"
+                        className="w-full border border-[#2f66f6] text-[#2f66f6] py-3 rounded-2xl font-semibold transform transition active:scale-95 text-sm bg-white"
                     >
                         どっちも微妙
                     </button>
                     <button
                         onClick={handleBothWant}
-                        className="w-full bg-green-600 text-white py-3 rounded-xl font-bold shadow-lg transform transition active:scale-95"
+                        className="w-full bg-[#2f66f6] text-white py-3 rounded-2xl font-bold shadow-[0_14px_30px_-18px_rgba(47,102,246,0.8)] transform transition active:scale-95 text-sm"
                     >
                         どっちも行きたい
                     </button>

@@ -39,48 +39,43 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
-      <main className="flex flex-col items-center space-y-8 max-w-md w-full">
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-gray-900 tracking-tight">
-            どこ行く？🍽
-          </h1>
-          <p className="text-lg text-gray-600">
-            みんなの「気分」で<br />
-            不満が出ないお店を決めよう
-          </p>
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10">
+      <main className="flex flex-col items-center gap-8 max-w-md w-full">
+        <div className="text-center space-y-3">
+          <h1 className="text-4xl font-bold tracking-tight text-[#2f66f6]">dokoiku</h1>
+          <p className="text-sm text-[#6b7a99]">みんなでお店を決めよう</p>
         </div>
 
-        <div className="w-full bg-white p-6 rounded-xl shadow-lg space-y-6">
+        <div className="w-full bg-white/90 backdrop-blur-sm p-6 rounded-2xl border border-[#d9e2f4] space-y-6 shadow-[0_18px_45px_-30px_rgba(47,102,246,0.45)]">
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">エリア</label>
+            <label className="block text-sm font-medium text-[#4b5a7a]">エリア</label>
             <div className="relative">
               <input
                 type="text"
                 value={area}
                 onChange={(e) => setArea(e.target.value)}
                 placeholder="例：渋谷、新宿"
-                className="block w-full rounded-lg border-gray-300 bg-gray-50 p-3 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+                className="block w-full rounded-xl border border-[#d9e2f4] bg-white p-3 text-sm text-[#1c2b52] placeholder:text-[#9aa7c1] focus:border-[#2f66f6] focus:ring-[#2f66f6]"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">予算 (円)</label>
+            <label className="block text-sm font-medium text-[#4b5a7a]">予算 (円)</label>
             <div className="grid grid-cols-2 gap-3">
               <input
                 type="number"
                 value={budgetMin}
                 onChange={(e) => setBudgetMin(e.target.value)}
                 placeholder="下限"
-                className="block w-full rounded-lg border-gray-300 bg-gray-50 p-3 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+                className="block w-full rounded-xl border border-[#d9e2f4] bg-white p-3 text-sm text-[#1c2b52] placeholder:text-[#9aa7c1] focus:border-[#2f66f6] focus:ring-[#2f66f6]"
               />
               <input
                 type="number"
                 value={budgetMax}
                 onChange={(e) => setBudgetMax(e.target.value)}
                 placeholder="上限"
-                className="block w-full rounded-lg border-gray-300 bg-gray-50 p-3 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+                className="block w-full rounded-xl border border-[#d9e2f4] bg-white p-3 text-sm text-[#1c2b52] placeholder:text-[#9aa7c1] focus:border-[#2f66f6] focus:ring-[#2f66f6]"
               />
             </div>
           </div>
@@ -88,16 +83,15 @@ export default function Home() {
           <button
             onClick={handleCreateRoom}
             disabled={loading}
-            className={`w-full text-white font-bold py-4 px-6 rounded-xl shadow-md transition-all transform active:scale-95 text-lg
-              ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg'}`}
+            className={`w-full font-bold py-3 px-6 rounded-2xl text-white transition-all active:scale-95 text-sm shadow-[0_14px_30px_-18px_rgba(47,102,246,0.8)]
+              ${loading ? 'bg-[#9aa7c1] cursor-not-allowed' : 'bg-[#2f66f6] hover:bg-[#2757e6]'}`}
           >
-            {loading ? '準備中...' : '候補を取得する'}
+            {loading ? '準備中...' : 'ルームを作成する'}
           </button>
         </div>
 
-        <div className="text-sm text-gray-400 text-center">
-          <p>幹事さんが条件を決めて、</p>
-          <p>みんなにURLをシェアするだけ！</p>
+        <div className="text-xs text-[#9aa7c1] text-center">
+          <p>ログイン不要・無料</p>
         </div>
       </main>
     </div>
