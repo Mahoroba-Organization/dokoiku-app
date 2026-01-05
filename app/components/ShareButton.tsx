@@ -1,12 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function ShareButton() {
     const [copied, setCopied] = useState(false);
+    const [url, setUrl] = useState('');
+
+    useEffect(() => {
+        setUrl(window.location.href);
+    }, []);
 
     const handleCopy = () => {
-        const url = window.location.href;
+        if (!url) return;
         navigator.clipboard.writeText(url).then(() => {
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
@@ -17,14 +22,23 @@ export default function ShareButton() {
     };
 
     return (
-        <button
-            onClick={handleCopy}
-            className={`w-full font-bold py-3 px-6 rounded-xl shadow transition-all transform active:scale-95 border-2 
-                ${copied
-                    ? 'bg-green-100 border-green-500 text-green-700'
-                    : 'bg-white border-blue-500 text-blue-600 hover:bg-blue-50'}`}
-        >
-            {copied ? 'コピーしました！' : 'URLをコピーして招待'}
-        </button>
+        <div className="w-full rounded-2xl border border-gray-200 bg-gray-50 p-4">
+            <p className="text-xs font-bold text-gray-500 mb-2">ルームリンク</p>
+            <div className="flex items-center gap-2">
+                <div className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600 truncate">
+                    {url || 'URLを取得中...'}
+                </div>
+                <button
+                    onClick={handleCopy}
+                    className={`shrink-0 rounded-xl px-4 py-2 text-xs font-bold shadow-sm transition active:scale-95 ${
+                        copied
+                            ? 'bg-green-600 text-white'
+                            : 'bg-[#070719] text-white hover:bg-black'
+                    }`}
+                >
+                    {copied ? 'コピー済み' : 'コピー'}
+                </button>
+            </div>
+        </div>
     );
 }
