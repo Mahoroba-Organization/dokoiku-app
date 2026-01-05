@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
 export default function VotePage() {
@@ -8,9 +8,11 @@ export default function VotePage() {
     const roomId = params.roomId as string;
     const router = useRouter();
     const [currentPair, setCurrentPair] = useState<[any, any] | null>(null);
+    const [prefetchedPair, setPrefetchedPair] = useState<[any, any] | null>(null);
     const [loading, setLoading] = useState(true);
     const [userId, setUserId] = useState('');
     const [progress, setProgress] = useState({ evaluated: 0, total: 0, isDecided: false });
+    const prefetchPromiseRef = useRef<Promise<[any, any] | null> | null>(null);
 
     const PREFER_SCORE = 80;
     const OTHER_SCORE = 40;
@@ -28,9 +30,32 @@ export default function VotePage() {
         setUserId(storedUserId);
     }, []);
 
-    // Fetch next pair
-    const fetchNextPair = async () => {
-        if (!userId) return;
+    function prefetchNextPair(): Promise<[any, any] | null> | null {
+        if (!userId || progress.isDecided) return null;
+        if (prefetchPromiseRef.current) return prefetchPromiseRef.current;
+
+        const promise = fetch(`/api/rooms/${roomId}/next-shop?userId=${userId}`)
+            .then(res => res.json())
+            .then(data => {
+                const pair = data.pair || null;
+                setPrefetchedPair(pair);
+                return pair;
+            })
+            .catch(error => {
+                console.error('Failed to prefetch next pair:', error);
+                return null;
+            })
+            .finally(() => {
+                prefetchPromiseRef.current = null;
+            });
+
+        prefetchPromiseRef.current = promise;
+        return promise;
+    }
+
+    // Fetch next pair and progress
+    const fetchNextPair = async (): Promise<[any, any] | null> => {
+        if (!userId) return null;
 
         setLoading(true);
         try {
@@ -41,12 +66,16 @@ export default function VotePage() {
 
             if (data.pair) {
                 setCurrentPair(data.pair);
+                prefetchNextPair();
+                return data.pair;
             } else {
                 // No more shops or decided
                 setCurrentPair(null);
+                return null;
             }
         } catch (error) {
             console.error('Failed to fetch next pair:', error);
+            return null;
         } finally {
             setLoading(false);
         }
@@ -58,6 +87,12 @@ export default function VotePage() {
             fetchNextPair();
         }
     }, [userId, roomId]);
+
+    useEffect(() => {
+        if (currentPair) {
+            prefetchNextPair();
+        }
+    }, [currentPair, userId, roomId]);
 
     const submitVotes = async (votes: Array<{ shopId: string; score: number }>) => {
         try {
@@ -73,13 +108,21 @@ export default function VotePage() {
             if (data.isDecided) {
                 setProgress(prev => ({ ...prev, isDecided: true }));
                 setCurrentPair(null);
+                setPrefetchedPair(null);
                 return;
             }
 
-            // Fetch next shop after short delay
-            setTimeout(() => {
+            let nextPair = prefetchedPair;
+            if (!nextPair && prefetchPromiseRef.current) {
+                nextPair = await prefetchPromiseRef.current;
+            }
+
+            if (nextPair) {
+                setCurrentPair(nextPair);
+                setPrefetchedPair(null);
+            } else {
                 fetchNextPair();
-            }, 300);
+            }
         } catch (error) {
             console.error('Vote failed', error);
         }
@@ -171,8 +214,6 @@ export default function VotePage() {
             </div>
         );
     }
-
-    const progressPercent = progress.total > 0 ? Math.round((progress.evaluated / progress.total) * 100) : 0;
 
     const leftShop = currentPair[0];
     const rightShop = currentPair[1];
