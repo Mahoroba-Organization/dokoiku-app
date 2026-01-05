@@ -5,9 +5,6 @@ export default async function JoinPage({ params }: { params: Promise<{ roomId: s
     const { roomId } = await params;
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
-            <div className="w-full max-w-md mb-4">
-                <ShareButton />
-            </div>
             <main className="w-full max-w-md bg-white p-8 rounded-xl shadow-sm text-center">
                 <h1 className="text-2xl font-bold text-gray-900 mb-6">ルームに参加</h1>
                 <div className="space-y-4">
@@ -29,6 +26,9 @@ export default async function JoinPage({ params }: { params: Promise<{ roomId: s
                     </div>
                 </div>
             </main>
+            <div className="w-full max-w-md mt-4">
+                <ShareButton />
+            </div>
         </div>
     );
 }
