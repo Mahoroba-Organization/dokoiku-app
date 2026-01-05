@@ -206,13 +206,10 @@ export default function VotePage() {
                 <div key={currentShop.id} className="bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-100 flex flex-col h-[75vh]">
                     <div className="h-2/5 bg-gray-200 relative">
                         {currentShop.photo?.pc?.l ? (
-                            <img src={currentShop.photo.pc.l} alt={currentShop.name} className="w-full h-full object-cover" />
+                            <img src={currentShop.photo.pc.l} alt="店舗画像" className="w-full h-full object-cover" />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center text-gray-400">No Image</div>
                         )}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
-                            <h2 className="text-white font-bold text-2xl leading-tight shadow-sm">{currentShop.name}</h2>
-                        </div>
                     </div>
 
                     <div className="flex-1 p-6 flex flex-col justify-between">
