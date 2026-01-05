@@ -83,9 +83,12 @@ export default function Home() {
           <button
             onClick={handleCreateRoom}
             disabled={loading}
-            className={`w-full font-bold py-3 px-6 rounded-2xl text-white transition-all active:scale-95 text-sm shadow-[0_14px_30px_-18px_rgba(47,102,246,0.8)]
+            className={`w-full font-bold py-3 px-6 rounded-2xl text-white transition-all active:scale-95 text-sm shadow-[0_14px_30px_-18px_rgba(47,102,246,0.8)] inline-flex items-center justify-center gap-2
               ${loading ? 'bg-[#9aa7c1] cursor-not-allowed' : 'bg-[#2f66f6] hover:bg-[#2757e6]'}`}
           >
+            {loading && (
+              <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-white/50 border-t-white" />
+            )}
             {loading ? '準備中...' : 'ルームを作成する'}
           </button>
         </div>
