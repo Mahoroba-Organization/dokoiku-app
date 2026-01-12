@@ -225,7 +225,7 @@ export default function VotePage() {
             <header className="p-4 z-10">
                 <button
                     onClick={() => router.push(`/room/${roomId}/join`)}
-                    className="text-xs font-semibold text-[#6b7a99] hover:text-[#1c2b52] flex items-center"
+                    className="text-xs font-semibold text-[#6b7a99] hover:text-[#1c2b52] flex items-center cursor-pointer"
                 >
                     ← ルームへ
                 </button>
@@ -252,7 +252,7 @@ export default function VotePage() {
                         </div>
                         <button
                             onClick={handleNgLeft}
-                            className="absolute right-3 top-3 border border-[#2f66f6] bg-white text-[#2f66f6] text-xs px-2 py-1 rounded-full font-semibold shadow-sm"
+                            className="absolute right-3 top-3 border border-[#2f66f6] bg-white text-[#2f66f6] text-xs px-2 py-1 rounded-full font-semibold shadow-sm cursor-pointer"
                         >
                             NG
                         </button>
@@ -266,7 +266,7 @@ export default function VotePage() {
                             <div className="space-y-2">
                                 <button
                                     onClick={handlePickLeft}
-                                    className="w-full bg-[#2f66f6] text-white py-3 rounded-2xl font-bold shadow-[0_14px_30px_-18px_rgba(47,102,246,0.8)] transform transition active:scale-95 text-sm"
+                                    className="w-full bg-[#2f66f6] text-white py-3 rounded-2xl font-bold shadow-[0_14px_30px_-18px_rgba(47,102,246,0.8)] transform transition active:scale-95 text-sm cursor-pointer"
                                 >
                                     こっちがいい
                                 </button>
@@ -287,7 +287,7 @@ export default function VotePage() {
                         </div>
                         <button
                             onClick={handleNgRight}
-                            className="absolute right-3 top-3 border border-[#2f66f6] bg-white text-[#2f66f6] text-xs px-2 py-1 rounded-full font-semibold shadow-sm"
+                            className="absolute right-3 top-3 border border-[#2f66f6] bg-white text-[#2f66f6] text-xs px-2 py-1 rounded-full font-semibold shadow-sm cursor-pointer"
                         >
                             NG
                         </button>
@@ -301,7 +301,7 @@ export default function VotePage() {
                             <div className="space-y-2">
                                 <button
                                     onClick={handlePickRight}
-                                    className="w-full bg-[#2f66f6] text-white py-3 rounded-2xl font-bold shadow-[0_14px_30px_-18px_rgba(47,102,246,0.8)] transform transition active:scale-95 text-sm"
+                                    className="w-full bg-[#2f66f6] text-white py-3 rounded-2xl font-bold shadow-[0_14px_30px_-18px_rgba(47,102,246,0.8)] transform transition active:scale-95 text-sm cursor-pointer"
                                 >
                                     こっちがいい
                                 </button>
@@ -313,13 +313,13 @@ export default function VotePage() {
                 <div className="mt-4 grid grid-cols-2 gap-3">
                     <button
                         onClick={handleBothMeh}
-                        className="w-full border border-[#2f66f6] text-[#2f66f6] py-3 rounded-2xl font-semibold transform transition active:scale-95 text-sm bg-white"
+                        className="w-full border border-[#2f66f6] text-[#2f66f6] py-3 rounded-2xl font-semibold transform transition active:scale-95 text-sm bg-white cursor-pointer"
                     >
                         どっちも微妙
                     </button>
                     <button
                         onClick={handleBothWant}
-                        className="w-full bg-[#2f66f6] text-white py-3 rounded-2xl font-bold shadow-[0_14px_30px_-18px_rgba(47,102,246,0.8)] transform transition active:scale-95 text-sm"
+                        className="w-full bg-[#2f66f6] text-white py-3 rounded-2xl font-bold shadow-[0_14px_30px_-18px_rgba(47,102,246,0.8)] transform transition active:scale-95 text-sm cursor-pointer"
                     >
                         どっちも行きたい
                     </button>
