@@ -3,8 +3,7 @@ import { getRoom, saveRoom } from '@/app/lib/kv';
 import { CANDIDATE_POOL_SIZE, selectPairByGenreBias, selectSingleByGenreBias, Shop } from '@/app/lib/genre_selection';
 import { filterShopsByBudgetRange, getBudgetCodesForRange, normalizeBudgetRange } from '@/app/lib/budget';
 import { getUserVotes, isNgVote } from '@/app/lib/vote_stats';
-import { computeEloRatings, getTopKShopIds, getMissingTopPairs } from '@/app/lib/elo';
-import { USER_TOP_K } from '@/app/lib/explore_exploit';
+import { computeEloRatings, getBoundaryDelta, getBoundaryPairs, getMissingTopPairs, getTopKShopIds, TOP_BOUNDARY_DELTA, TOP_FOCUS_COUNT, TOP_MISSING_PAIR_LIMIT, TOP_TARGET_COUNT } from '@/app/lib/elo';
 
 const HOTPEPPER_API_ENDPOINT = 'http://webservice.recruit.co.jp/hotpepper/gourmet/v1/';
 
@@ -129,15 +128,31 @@ export async function GET(
             const comparisons = room.comparisons?.[userId] || [];
             const candidateIds = candidatePool.map(shop => shop.id);
             const ratings = computeEloRatings(candidateIds, comparisons, excludedShopIds);
-            const topIds = getTopKShopIds(ratings, USER_TOP_K);
-            const missingPairs = getMissingTopPairs(topIds, comparisons);
+            const topIds = getTopKShopIds(ratings, TOP_TARGET_COUNT);
+            const focusIds = getTopKShopIds(ratings, TOP_FOCUS_COUNT);
+            const missingTopPairs = getMissingTopPairs(topIds, comparisons);
+            const boundaryDelta = getBoundaryDelta(ratings, TOP_TARGET_COUNT);
 
-            if (missingPairs.length > 0) {
-                const target = missingPairs[Math.floor(Math.random() * missingPairs.length)];
+            if (missingTopPairs.length > TOP_MISSING_PAIR_LIMIT) {
+                const target = missingTopPairs[Math.floor(Math.random() * missingTopPairs.length)];
                 const shopA = candidatePool.find(shop => shop.id === target.a);
                 const shopB = candidatePool.find(shop => shop.id === target.b);
                 if (shopA && shopB) {
                     nextPair = [shopA, shopB];
+                }
+            }
+
+            if (!nextPair && boundaryDelta !== null && boundaryDelta < TOP_BOUNDARY_DELTA) {
+                const topSet = new Set(topIds);
+                const boundaryIds = focusIds.filter(id => !topSet.has(id));
+                const boundaryPairs = getBoundaryPairs(topIds, boundaryIds, comparisons);
+                if (boundaryPairs.length > 0) {
+                    const target = boundaryPairs[Math.floor(Math.random() * boundaryPairs.length)];
+                    const shopA = candidatePool.find(shop => shop.id === target.a);
+                    const shopB = candidatePool.find(shop => shop.id === target.b);
+                    if (shopA && shopB) {
+                        nextPair = [shopA, shopB];
+                    }
                 }
             }
 

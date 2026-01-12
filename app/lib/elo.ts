@@ -8,6 +8,10 @@ export type Comparison = {
 
 export const ELO_BASE = 1000;
 export const ELO_K = 32;
+export const TOP_TARGET_COUNT = 5;
+export const TOP_FOCUS_COUNT = 10;
+export const TOP_BOUNDARY_DELTA = 50;
+export const TOP_MISSING_PAIR_LIMIT = 0;
 
 function expectedScore(ratingA: number, ratingB: number): number {
     return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
@@ -52,6 +56,15 @@ export function getTopKShopIds(ratings: Map<string, number>, k: number): string[
         .map(([id]) => id);
 }
 
+export function getBoundaryDelta(ratings: Map<string, number>, topCount: number): number | null {
+    const sorted = Array.from(ratings.entries()).sort((a, b) => {
+        if (b[1] !== a[1]) return b[1] - a[1];
+        return a[0].localeCompare(b[0]);
+    });
+    if (sorted.length <= topCount) return null;
+    return sorted[topCount - 1][1] - sorted[topCount][1];
+}
+
 export function getMissingTopPairs(topIds: string[], comparisons: Comparison[]): Array<{ a: string; b: string }> {
     const existing = new Set(
         comparisons.map(comp => (comp.a < comp.b ? `${comp.a}|${comp.b}` : `${comp.b}|${comp.a}`))
@@ -68,4 +81,24 @@ export function getMissingTopPairs(topIds: string[], comparisons: Comparison[]):
         }
     }
     return missing;
+}
+
+export function getBoundaryPairs(
+    topIds: string[],
+    nextIds: string[],
+    comparisons: Comparison[]
+): Array<{ a: string; b: string }> {
+    const existing = new Set(
+        comparisons.map(comp => (comp.a < comp.b ? `${comp.a}|${comp.b}` : `${comp.b}|${comp.a}`))
+    );
+    const pairs: Array<{ a: string; b: string }> = [];
+    topIds.forEach(a => {
+        nextIds.forEach(b => {
+            const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+            if (!existing.has(key)) {
+                pairs.push({ a, b });
+            }
+        });
+    });
+    return pairs;
 }
