@@ -78,6 +78,12 @@ export async function GET(
         }
 
         const userVotes = getUserVotes(room.votes, userId);
+        if (!room.pairHistory) room.pairHistory = {};
+        if (!room.pairHistory[userId]) room.pairHistory[userId] = [];
+        const pairHistory = room.pairHistory[userId];
+        const pairHistoryKeys = new Set(
+            pairHistory.map(pair => (pair.a < pair.b ? `${pair.a}|${pair.b}` : `${pair.b}|${pair.a}`))
+        );
         const excludedShopIds = new Set<string>();
         Object.entries(userVotes).forEach(([shopId, entry]) => {
             if (isNgVote(entry)) {
@@ -88,18 +94,49 @@ export async function GET(
         const unseen = candidatePool.filter(shop => userVotes[shop.id] === undefined);
         let nextPair: [Shop, Shop] | null = null;
 
+        const pickPairAvoidingHistory = (candidates: Shop[]): [Shop, Shop] | null => {
+            if (candidates.length < 2) return null;
+            for (let i = 0; i < 10; i += 1) {
+                const pair = selectPairByGenreBias(userId, candidates, room.votes, candidatePool);
+                if (!pair) return null;
+                const key = pair[0].id < pair[1].id ? `${pair[0].id}|${pair[1].id}` : `${pair[1].id}|${pair[0].id}`;
+                if (!pairHistoryKeys.has(key)) return pair;
+            }
+            return selectPairByGenreBias(userId, candidates, room.votes, candidatePool);
+        };
+
         if (unseen.length >= 2) {
-            nextPair = selectPairByGenreBias(userId, unseen, room.votes, candidatePool);
+            nextPair = pickPairAvoidingHistory(unseen);
         } else if (unseen.length === 1) {
             const first = unseen[0];
             const seenCandidates = candidatePool.filter(
                 shop => shop.id !== first.id && !excludedShopIds.has(shop.id)
             );
-            const second = selectSingleByGenreBias(userId, seenCandidates, room.votes, candidatePool);
+            const eligibleSeconds = seenCandidates.filter(shop => {
+                const key = first.id < shop.id ? `${first.id}|${shop.id}` : `${shop.id}|${first.id}`;
+                return !pairHistoryKeys.has(key);
+            });
+            const second = selectSingleByGenreBias(
+                userId,
+                eligibleSeconds.length > 0 ? eligibleSeconds : seenCandidates,
+                room.votes,
+                candidatePool
+            );
             nextPair = second ? [first, second] : null;
         } else {
             const seenCandidates = candidatePool.filter(shop => !excludedShopIds.has(shop.id));
-            nextPair = selectPairByGenreBias(userId, seenCandidates, room.votes, candidatePool);
+            nextPair = pickPairAvoidingHistory(seenCandidates);
+        }
+
+        if (nextPair) {
+            const key = nextPair[0].id < nextPair[1].id
+                ? { a: nextPair[0].id, b: nextPair[1].id }
+                : { a: nextPair[1].id, b: nextPair[0].id };
+            pairHistory.push(key);
+            if (pairHistory.length > 20) {
+                room.pairHistory[userId] = pairHistory.slice(-20);
+            }
+            await saveRoom(roomId, room);
         }
         const evaluatedCount = Object.keys(userVotes).length;
 

@@ -20,6 +20,7 @@ export type RoomData = {
         top2ShopId: string;
         scoreDiff: number;
     }>;
+    pairHistory?: Record<string, Array<{ a: string; b: string }>>;
     isDecided?: boolean;
     decidedShopId?: string;
 };
