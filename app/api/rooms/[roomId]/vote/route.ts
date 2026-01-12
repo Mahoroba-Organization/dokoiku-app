@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { addVote, addVotes, getRoom, saveRoom } from '@/app/lib/kv';
 import { calculateRanking, checkAutoDecision, getParticipantCount, getMinCommon, CONSECUTIVE_ROUNDS } from '@/app/lib/explore_exploit';
+import { Comparison } from '@/app/lib/elo';
+import { NG_SCORE } from '@/app/lib/vote_constants';
 
 export async function POST(
     request: Request,
@@ -22,6 +24,26 @@ export async function POST(
         return NextResponse.json({ error: 'votes are required' }, { status: 400 });
     }
 
+    const toComparison = (items: Array<{ shopId: string; score: number }>): Comparison | null => {
+        if (items.length !== 2) return null;
+        const [first, second] = items;
+        if (first.score === NG_SCORE && second.score === NG_SCORE) {
+            return { a: first.shopId, b: second.shopId, result: 'tie' };
+        }
+        if (first.score === NG_SCORE) {
+            return { a: first.shopId, b: second.shopId, result: 'b' };
+        }
+        if (second.score === NG_SCORE) {
+            return { a: first.shopId, b: second.shopId, result: 'a' };
+        }
+        if (first.score === second.score) {
+            return { a: first.shopId, b: second.shopId, result: 'tie' };
+        }
+        return first.score > second.score
+            ? { a: first.shopId, b: second.shopId, result: 'a' }
+            : { a: first.shopId, b: second.shopId, result: 'b' };
+    };
+
     try {
         // 投票を保存
         if (voteItems.length === 1) {
@@ -36,10 +58,18 @@ export async function POST(
             return NextResponse.json({ error: 'Room not found' }, { status: 404 });
         }
 
+        // 比較履歴を保存
+        const comparison = toComparison(voteItems);
+        if (comparison) {
+            if (!room.comparisons) room.comparisons = {};
+            if (!room.comparisons[userId]) room.comparisons[userId] = [];
+            room.comparisons[userId].push(comparison);
+        }
+
         // ランキング計算
         const participantCount = getParticipantCount(room.votes);
         const minCommon = getMinCommon(participantCount);
-        const ranking = calculateRanking(room.shops, room.votes, minCommon);
+        const ranking = calculateRanking(room.shops, room.votes, room.comparisons, minCommon);
 
         // 順位履歴を更新
         if (!room.rankHistory) {

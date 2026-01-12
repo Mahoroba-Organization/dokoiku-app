@@ -3,6 +3,8 @@ import { getRoom, saveRoom } from '@/app/lib/kv';
 import { CANDIDATE_POOL_SIZE, selectPairByGenreBias, selectSingleByGenreBias, Shop } from '@/app/lib/genre_selection';
 import { filterShopsByBudgetRange, getBudgetCodesForRange, normalizeBudgetRange } from '@/app/lib/budget';
 import { getUserVotes, isNgVote } from '@/app/lib/vote_stats';
+import { computeEloRatings, getTopKShopIds, getMissingTopPairs } from '@/app/lib/elo';
+import { USER_TOP_K } from '@/app/lib/explore_exploit';
 
 const HOTPEPPER_API_ENDPOINT = 'http://webservice.recruit.co.jp/hotpepper/gourmet/v1/';
 
@@ -124,8 +126,25 @@ export async function GET(
             );
             nextPair = second ? [first, second] : null;
         } else {
-            const seenCandidates = candidatePool.filter(shop => !excludedShopIds.has(shop.id));
-            nextPair = pickPairAvoidingHistory(seenCandidates);
+            const comparisons = room.comparisons?.[userId] || [];
+            const candidateIds = candidatePool.map(shop => shop.id);
+            const ratings = computeEloRatings(candidateIds, comparisons, excludedShopIds);
+            const topIds = getTopKShopIds(ratings, USER_TOP_K);
+            const missingPairs = getMissingTopPairs(topIds, comparisons);
+
+            if (missingPairs.length > 0) {
+                const target = missingPairs[Math.floor(Math.random() * missingPairs.length)];
+                const shopA = candidatePool.find(shop => shop.id === target.a);
+                const shopB = candidatePool.find(shop => shop.id === target.b);
+                if (shopA && shopB) {
+                    nextPair = [shopA, shopB];
+                }
+            }
+
+            if (!nextPair) {
+                const seenCandidates = candidatePool.filter(shop => !excludedShopIds.has(shop.id));
+                nextPair = pickPairAvoidingHistory(seenCandidates);
+            }
         }
 
         if (nextPair) {

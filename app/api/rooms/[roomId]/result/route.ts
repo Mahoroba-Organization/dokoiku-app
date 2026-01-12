@@ -23,7 +23,7 @@ export async function GET(
     // 候補店舗のランキング計算
     const participantCount = getParticipantCount(votes);
     const minCommon = getMinCommon(participantCount);
-    const ranking = calculateRanking(shops, votes, minCommon);
+    const ranking = calculateRanking(shops, votes, room.comparisons, minCommon);
 
     // レスポンス用に整形
     const candidates = ranking.map(ranked => ({
@@ -43,5 +43,4 @@ export async function GET(
         }
     });
 }
-
 
