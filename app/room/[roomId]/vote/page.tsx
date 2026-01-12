@@ -217,6 +217,7 @@ export default function VotePage() {
 
     const leftShop = currentPair[0];
     const rightShop = currentPair[1];
+    const hasCompletedAll = progress.total > 0 && progress.evaluated >= progress.total;
 
     return (
         <div className="min-h-screen flex flex-col select-none">
@@ -228,6 +229,11 @@ export default function VotePage() {
                 >
                     ← ルームへ
                 </button>
+                {hasCompletedAll && (
+                    <div className="mt-3 text-xs font-semibold text-[#2f66f6]">
+                        30件の確認が完了しました
+                    </div>
+                )}
             </header>
 
             {/* Main Card Area */}
