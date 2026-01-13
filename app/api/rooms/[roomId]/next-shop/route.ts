@@ -82,9 +82,8 @@ export async function GET(
         if (!room.pairHistory) room.pairHistory = {};
         if (!room.pairHistory[userId]) room.pairHistory[userId] = [];
         const pairHistory = room.pairHistory[userId];
-        const pairHistoryKeys = new Set(
-            pairHistory.map(pair => (pair.a < pair.b ? `${pair.a}|${pair.b}` : `${pair.b}|${pair.a}`))
-        );
+        const toPairKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+        const pairHistoryKeys = new Set(pairHistory.map(pair => toPairKey(pair.a, pair.b)));
         const excludedShopIds = new Set<string>();
         Object.entries(userVotes).forEach(([shopId, entry]) => {
             if (isNgVote(entry)) {
@@ -93,37 +92,58 @@ export async function GET(
         });
 
         const unseen = candidatePool.filter(shop => userVotes[shop.id] === undefined);
-        let nextPair: [Shop, Shop] | null = null;
+        let nextSet: [Shop, Shop, Shop] | null = null;
 
         const pickPairAvoidingHistory = (candidates: Shop[]): [Shop, Shop] | null => {
             if (candidates.length < 2) return null;
             for (let i = 0; i < 10; i += 1) {
                 const pair = selectPairByGenreBias(userId, candidates, room.votes, candidatePool);
                 if (!pair) return null;
-                const key = pair[0].id < pair[1].id ? `${pair[0].id}|${pair[1].id}` : `${pair[1].id}|${pair[0].id}`;
+                const key = toPairKey(pair[0].id, pair[1].id);
                 if (!pairHistoryKeys.has(key)) return pair;
             }
             return selectPairByGenreBias(userId, candidates, room.votes, candidatePool);
         };
 
-        if (unseen.length >= 2) {
-            nextPair = pickPairAvoidingHistory(unseen);
+        const pickThird = (first: Shop, second: Shop, candidates: Shop[]): Shop | null => {
+            const eligible = candidates.filter(shop => {
+                const key1 = toPairKey(first.id, shop.id);
+                const key2 = toPairKey(second.id, shop.id);
+                return !pairHistoryKeys.has(key1) && !pairHistoryKeys.has(key2);
+            });
+            return selectSingleByGenreBias(
+                userId,
+                eligible.length > 0 ? eligible : candidates,
+                room.votes,
+                candidatePool
+            );
+        };
+
+        if (unseen.length >= 3) {
+            const basePair = pickPairAvoidingHistory(unseen);
+            if (basePair) {
+                const remaining = unseen.filter(shop => shop.id !== basePair[0].id && shop.id !== basePair[1].id);
+                const third = pickThird(basePair[0], basePair[1], remaining);
+                nextSet = third ? [basePair[0], basePair[1], third] : null;
+            }
+        } else if (unseen.length === 2) {
+            const [first, second] = unseen;
+            const seenCandidates = candidatePool.filter(
+                shop => shop.id !== first.id && shop.id !== second.id && !excludedShopIds.has(shop.id)
+            );
+            const third = pickThird(first, second, seenCandidates);
+            nextSet = third ? [first, second, third] : null;
         } else if (unseen.length === 1) {
             const first = unseen[0];
             const seenCandidates = candidatePool.filter(
                 shop => shop.id !== first.id && !excludedShopIds.has(shop.id)
             );
-            const eligibleSeconds = seenCandidates.filter(shop => {
-                const key = first.id < shop.id ? `${first.id}|${shop.id}` : `${shop.id}|${first.id}`;
-                return !pairHistoryKeys.has(key);
-            });
-            const second = selectSingleByGenreBias(
-                userId,
-                eligibleSeconds.length > 0 ? eligibleSeconds : seenCandidates,
-                room.votes,
-                candidatePool
-            );
-            nextPair = second ? [first, second] : null;
+            const second = selectSingleByGenreBias(userId, seenCandidates, room.votes, candidatePool);
+            if (second) {
+                const remaining = seenCandidates.filter(shop => shop.id !== second.id);
+                const third = pickThird(first, second, remaining);
+                nextSet = third ? [first, second, third] : null;
+            }
         } else {
             const comparisons = room.comparisons?.[userId] || [];
             const candidateIds = candidatePool.map(shop => shop.id);
@@ -138,11 +158,15 @@ export async function GET(
                 const shopA = candidatePool.find(shop => shop.id === target.a);
                 const shopB = candidatePool.find(shop => shop.id === target.b);
                 if (shopA && shopB) {
-                    nextPair = [shopA, shopB];
+                    const remaining = candidatePool.filter(
+                        shop => shop.id !== shopA.id && shop.id !== shopB.id && !excludedShopIds.has(shop.id)
+                    );
+                    const third = pickThird(shopA, shopB, remaining);
+                    nextSet = third ? [shopA, shopB, third] : null;
                 }
             }
 
-            if (!nextPair && boundaryDelta !== null && boundaryDelta < TOP_BOUNDARY_DELTA) {
+            if (!nextSet && boundaryDelta !== null && boundaryDelta < TOP_BOUNDARY_DELTA) {
                 const topSet = new Set(topIds);
                 const boundaryIds = focusIds.filter(id => !topSet.has(id));
                 const boundaryPairs = getBoundaryPairs(topIds, boundaryIds, comparisons);
@@ -151,22 +175,39 @@ export async function GET(
                     const shopA = candidatePool.find(shop => shop.id === target.a);
                     const shopB = candidatePool.find(shop => shop.id === target.b);
                     if (shopA && shopB) {
-                        nextPair = [shopA, shopB];
+                        const remaining = candidatePool.filter(
+                            shop => shop.id !== shopA.id && shop.id !== shopB.id && !excludedShopIds.has(shop.id)
+                        );
+                        const third = pickThird(shopA, shopB, remaining);
+                        nextSet = third ? [shopA, shopB, third] : null;
                     }
                 }
             }
 
-            if (!nextPair) {
+            if (!nextSet) {
                 const seenCandidates = candidatePool.filter(shop => !excludedShopIds.has(shop.id));
-                nextPair = pickPairAvoidingHistory(seenCandidates);
+                const basePair = pickPairAvoidingHistory(seenCandidates);
+                if (basePair) {
+                    const remaining = seenCandidates.filter(
+                        shop => shop.id !== basePair[0].id && shop.id !== basePair[1].id
+                    );
+                    const third = pickThird(basePair[0], basePair[1], remaining);
+                    nextSet = third ? [basePair[0], basePair[1], third] : null;
+                }
             }
         }
 
-        if (nextPair) {
-            const key = nextPair[0].id < nextPair[1].id
-                ? { a: nextPair[0].id, b: nextPair[1].id }
-                : { a: nextPair[1].id, b: nextPair[0].id };
-            pairHistory.push(key);
+        if (nextSet) {
+            const [a, b, c] = nextSet;
+            const pairs = [
+                { a: a.id, b: b.id },
+                { a: a.id, b: c.id },
+                { a: b.id, b: c.id }
+            ];
+            pairs.forEach(pair => {
+                const ordered = pair.a < pair.b ? pair : { a: pair.b, b: pair.a };
+                pairHistory.push(ordered);
+            });
             if (pairHistory.length > 20) {
                 room.pairHistory[userId] = pairHistory.slice(-20);
             }
@@ -175,7 +216,7 @@ export async function GET(
         const evaluatedCount = Object.keys(userVotes).length;
 
         return NextResponse.json({
-            pair: nextPair,
+            pair: nextSet,
             progress: {
                 evaluated: evaluatedCount,
                 total: (room.shops || []).length,

@@ -7,12 +7,12 @@ export default function VotePage() {
     const params = useParams();
     const roomId = params.roomId as string;
     const router = useRouter();
-    const [currentPair, setCurrentPair] = useState<[any, any] | null>(null);
-    const [prefetchedPair, setPrefetchedPair] = useState<[any, any] | null>(null);
+    const [currentPair, setCurrentPair] = useState<[any, any, any] | null>(null);
+    const [prefetchedPair, setPrefetchedPair] = useState<[any, any, any] | null>(null);
     const [loading, setLoading] = useState(true);
     const [userId, setUserId] = useState('');
     const [progress, setProgress] = useState({ evaluated: 0, total: 0, isDecided: false });
-    const prefetchPromiseRef = useRef<Promise<[any, any] | null> | null>(null);
+    const prefetchPromiseRef = useRef<Promise<[any, any, any] | null> | null>(null);
 
     const PREFER_SCORE = 80;
     const OTHER_SCORE = 40;
@@ -30,7 +30,7 @@ export default function VotePage() {
         setUserId(storedUserId);
     }, []);
 
-    function prefetchNextPair(): Promise<[any, any] | null> | null {
+    function prefetchNextPair(): Promise<[any, any, any] | null> | null {
         if (!userId || progress.isDecided) return null;
         if (prefetchPromiseRef.current) return prefetchPromiseRef.current;
 
@@ -54,7 +54,7 @@ export default function VotePage() {
     }
 
     // Fetch next pair and progress
-    const fetchNextPair = async (): Promise<[any, any] | null> => {
+    const fetchNextPair = async (): Promise<[any, any, any] | null> => {
         if (!userId) return null;
 
         setLoading(true);
@@ -128,27 +128,12 @@ export default function VotePage() {
         }
     };
 
-    const handlePickLeft = () => {
-        if (!currentPair) return;
-        submitVotes([
-            { shopId: currentPair[0].id, score: PREFER_SCORE },
-            { shopId: currentPair[1].id, score: OTHER_SCORE }
-        ]);
-    };
-
-    const handlePickRight = () => {
-        if (!currentPair) return;
-        submitVotes([
-            { shopId: currentPair[0].id, score: OTHER_SCORE },
-            { shopId: currentPair[1].id, score: PREFER_SCORE }
-        ]);
-    };
-
     const handleBothMeh = () => {
         if (!currentPair) return;
         submitVotes([
             { shopId: currentPair[0].id, score: BOTH_MEH_SCORE },
-            { shopId: currentPair[1].id, score: BOTH_MEH_SCORE }
+            { shopId: currentPair[1].id, score: BOTH_MEH_SCORE },
+            { shopId: currentPair[2].id, score: BOTH_MEH_SCORE }
         ]);
     };
 
@@ -156,24 +141,27 @@ export default function VotePage() {
         if (!currentPair) return;
         submitVotes([
             { shopId: currentPair[0].id, score: BOTH_WANT_SCORE },
-            { shopId: currentPair[1].id, score: BOTH_WANT_SCORE }
+            { shopId: currentPair[1].id, score: BOTH_WANT_SCORE },
+            { shopId: currentPair[2].id, score: BOTH_WANT_SCORE }
         ]);
     };
 
-    const handleNgLeft = () => {
+    const handlePickBest = (index: number) => {
         if (!currentPair) return;
-        submitVotes([
-            { shopId: currentPair[0].id, score: NG_SCORE },
-            { shopId: currentPair[1].id, score: PREFER_SCORE }
-        ]);
+        const votes = currentPair.map((shop, i) => ({
+            shopId: shop.id,
+            score: i === index ? PREFER_SCORE : OTHER_SCORE
+        }));
+        submitVotes(votes);
     };
 
-    const handleNgRight = () => {
+    const handleNg = (index: number) => {
         if (!currentPair) return;
-        submitVotes([
-            { shopId: currentPair[0].id, score: PREFER_SCORE },
-            { shopId: currentPair[1].id, score: NG_SCORE }
-        ]);
+        const votes = currentPair.map((shop, i) => ({
+            shopId: shop.id,
+            score: i === index ? NG_SCORE : OTHER_SCORE
+        }));
+        submitVotes(votes);
     };
 
     if (loading && !currentPair) {
@@ -215,8 +203,7 @@ export default function VotePage() {
         );
     }
 
-    const leftShop = currentPair[0];
-    const rightShop = currentPair[1];
+    const shops = currentPair;
     const hasCompletedAll = progress.total > 0 && progress.evaluated >= progress.total;
 
     return (
@@ -237,77 +224,47 @@ export default function VotePage() {
             </header>
 
             {/* Main Card Area */}
-            <main className="flex-1 flex flex-col p-4 max-w-3xl mx-auto w-full h-full justify-center">
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white/90 rounded-3xl overflow-hidden border border-[#d9e2f4] flex flex-col relative shadow-[0_18px_45px_-30px_rgba(47,102,246,0.45)]">
-                        <div className="h-44 bg-[#f2f5ff] relative">
-                            {leftShop.photo?.pc?.l ? (
-                                <img src={leftShop.photo.pc.l} alt={leftShop.name} className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center text-[#9aa7c1]">No Image</div>
-                            )}
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
-                                <h2 className="text-white font-bold text-lg leading-tight shadow-sm">{leftShop.name}</h2>
-                            </div>
-                        </div>
-                        <button
-                            onClick={handleNgLeft}
-                            className="absolute right-3 top-3 border border-[#2f66f6] bg-white text-[#2f66f6] text-xs px-2 py-1 rounded-full font-semibold shadow-sm cursor-pointer"
+            <main className="flex-1 flex flex-col p-4 max-w-5xl mx-auto w-full h-full justify-center">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {shops.map((shop: any, index: number) => (
+                        <div
+                            key={shop.id}
+                            className="bg-white/90 rounded-3xl overflow-hidden border border-[#d9e2f4] flex flex-col relative shadow-[0_18px_45px_-30px_rgba(47,102,246,0.45)]"
                         >
-                            NG
-                        </button>
-
-                        <div className="flex-1 p-4 flex flex-col justify-between">
-                            <div>
-                                <p className="text-[#6b7a99] text-sm mb-1">{leftShop.genre?.name}</p>
-                                <p className="text-[#1c2b52] font-semibold mb-4">{leftShop.budget?.name}</p>
+                            <div className="h-44 bg-[#f2f5ff] relative">
+                                {shop.photo?.pc?.l ? (
+                                    <img src={shop.photo.pc.l} alt={shop.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-[#9aa7c1]">No Image</div>
+                                )}
+                                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+                                    <h2 className="text-white font-bold text-lg leading-tight shadow-sm">{shop.name}</h2>
+                                </div>
                             </div>
+                            <button
+                                onClick={() => handleNg(index)}
+                                className="absolute right-3 top-3 border border-[#2f66f6] bg-white text-[#2f66f6] text-xs px-2 py-1 rounded-full font-semibold shadow-sm cursor-pointer"
+                            >
+                                NG
+                            </button>
 
-                            <div className="space-y-2">
-                                <button
-                                    onClick={handlePickLeft}
-                                    className="w-full bg-[#2f66f6] text-white py-3 rounded-2xl font-bold shadow-[0_14px_30px_-18px_rgba(47,102,246,0.8)] transform transition active:scale-95 text-sm cursor-pointer"
-                                >
-                                    こっちがいい
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                            <div className="flex-1 p-4 flex flex-col justify-between">
+                                <div>
+                                    <p className="text-[#6b7a99] text-sm mb-1">{shop.genre?.name}</p>
+                                    <p className="text-[#1c2b52] font-semibold mb-4">{shop.budget?.name}</p>
+                                </div>
 
-                    <div className="bg-white/90 rounded-3xl overflow-hidden border border-[#d9e2f4] flex flex-col relative shadow-[0_18px_45px_-30px_rgba(47,102,246,0.45)]">
-                        <div className="h-44 bg-[#f2f5ff] relative">
-                            {rightShop.photo?.pc?.l ? (
-                                <img src={rightShop.photo.pc.l} alt={rightShop.name} className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center text-[#9aa7c1]">No Image</div>
-                            )}
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
-                                <h2 className="text-white font-bold text-lg leading-tight shadow-sm">{rightShop.name}</h2>
-                            </div>
-                        </div>
-                        <button
-                            onClick={handleNgRight}
-                            className="absolute right-3 top-3 border border-[#2f66f6] bg-white text-[#2f66f6] text-xs px-2 py-1 rounded-full font-semibold shadow-sm cursor-pointer"
-                        >
-                            NG
-                        </button>
-
-                        <div className="flex-1 p-4 flex flex-col justify-between">
-                            <div>
-                                <p className="text-[#6b7a99] text-sm mb-1">{rightShop.genre?.name}</p>
-                                <p className="text-[#1c2b52] font-semibold mb-4">{rightShop.budget?.name}</p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <button
-                                    onClick={handlePickRight}
-                                    className="w-full bg-[#2f66f6] text-white py-3 rounded-2xl font-bold shadow-[0_14px_30px_-18px_rgba(47,102,246,0.8)] transform transition active:scale-95 text-sm cursor-pointer"
-                                >
-                                    こっちがいい
-                                </button>
+                                <div className="space-y-2">
+                                    <button
+                                        onClick={() => handlePickBest(index)}
+                                        className="w-full bg-[#2f66f6] text-white py-3 rounded-2xl font-bold shadow-[0_14px_30px_-18px_rgba(47,102,246,0.8)] transform transition active:scale-95 text-sm cursor-pointer"
+                                    >
+                                        こっちがいい
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    ))}
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-3">

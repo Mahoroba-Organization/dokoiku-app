@@ -24,24 +24,31 @@ export async function POST(
         return NextResponse.json({ error: 'votes are required' }, { status: 400 });
     }
 
-    const toComparison = (items: Array<{ shopId: string; score: number }>): Comparison | null => {
-        if (items.length !== 2) return null;
-        const [first, second] = items;
-        if (first.score === NG_SCORE && second.score === NG_SCORE) {
-            return { a: first.shopId, b: second.shopId, result: 'tie' };
+    const buildComparisons = (items: Array<{ shopId: string; score: number }>): Comparison[] => {
+        const comparisons: Comparison[] = [];
+        if (items.length < 2) return comparisons;
+        for (let i = 0; i < items.length; i += 1) {
+            for (let j = i + 1; j < items.length; j += 1) {
+                const first = items[i];
+                const second = items[j];
+                if (first.score === NG_SCORE && second.score === NG_SCORE) {
+                    comparisons.push({ a: first.shopId, b: second.shopId, result: 'tie' });
+                } else if (first.score === NG_SCORE) {
+                    comparisons.push({ a: first.shopId, b: second.shopId, result: 'b' });
+                } else if (second.score === NG_SCORE) {
+                    comparisons.push({ a: first.shopId, b: second.shopId, result: 'a' });
+                } else if (first.score === second.score) {
+                    comparisons.push({ a: first.shopId, b: second.shopId, result: 'tie' });
+                } else {
+                    comparisons.push(
+                        first.score > second.score
+                            ? { a: first.shopId, b: second.shopId, result: 'a' }
+                            : { a: first.shopId, b: second.shopId, result: 'b' }
+                    );
+                }
+            }
         }
-        if (first.score === NG_SCORE) {
-            return { a: first.shopId, b: second.shopId, result: 'b' };
-        }
-        if (second.score === NG_SCORE) {
-            return { a: first.shopId, b: second.shopId, result: 'a' };
-        }
-        if (first.score === second.score) {
-            return { a: first.shopId, b: second.shopId, result: 'tie' };
-        }
-        return first.score > second.score
-            ? { a: first.shopId, b: second.shopId, result: 'a' }
-            : { a: first.shopId, b: second.shopId, result: 'b' };
+        return comparisons;
     };
 
     try {
@@ -59,11 +66,11 @@ export async function POST(
         }
 
         // 比較履歴を保存
-        const comparison = toComparison(voteItems);
-        if (comparison) {
+        const comparisons = buildComparisons(voteItems);
+        if (comparisons.length > 0) {
             if (!room.comparisons) room.comparisons = {};
             if (!room.comparisons[userId]) room.comparisons[userId] = [];
-            room.comparisons[userId].push(comparison);
+            room.comparisons[userId].push(...comparisons);
         }
 
         // ランキング計算
