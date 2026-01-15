@@ -95,6 +95,13 @@ export default function VotePage() {
     }, [currentPair, userId, roomId]);
 
     const submitVotes = async (votes: Array<{ shopId: string; score: number }>) => {
+        const optimisticNext = prefetchedPair;
+        if (optimisticNext) {
+            setCurrentPair(optimisticNext);
+            setPrefetchedPair(null);
+            prefetchNextPair();
+        }
+
         try {
             const res = await fetch(`/api/rooms/${roomId}/vote`, {
                 method: 'POST',
@@ -112,16 +119,18 @@ export default function VotePage() {
                 return;
             }
 
-            let nextPair = prefetchedPair;
-            if (!nextPair && prefetchPromiseRef.current) {
-                nextPair = await prefetchPromiseRef.current;
-            }
+            if (!optimisticNext) {
+                let nextPair = prefetchedPair;
+                if (!nextPair && prefetchPromiseRef.current) {
+                    nextPair = await prefetchPromiseRef.current;
+                }
 
-            if (nextPair) {
-                setCurrentPair(nextPair);
-                setPrefetchedPair(null);
-            } else {
-                fetchNextPair();
+                if (nextPair) {
+                    setCurrentPair(nextPair);
+                    setPrefetchedPair(null);
+                } else {
+                    fetchNextPair();
+                }
             }
         } catch (error) {
             console.error('Vote failed', error);
