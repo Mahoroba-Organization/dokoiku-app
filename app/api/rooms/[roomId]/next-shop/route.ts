@@ -119,6 +119,18 @@ export async function GET(
             );
         };
 
+        const getPriorityCandidates = (excludeIds: Set<string>): Shop[] => {
+            const comparisons = room.comparisons?.[userId] || [];
+            const candidateIds = candidatePool.map(shop => shop.id);
+            const ratings = computeEloRatings(candidateIds, comparisons, excludedShopIds);
+            const topIds = getTopKShopIds(ratings, TOP_TARGET_COUNT);
+            const focusIds = getTopKShopIds(ratings, TOP_FOCUS_COUNT);
+            const topSet = new Set(topIds);
+            const boundaryIds = focusIds.filter(id => !topSet.has(id));
+            const priorityIds = new Set([...topIds, ...boundaryIds]);
+            return candidatePool.filter(shop => priorityIds.has(shop.id) && !excludeIds.has(shop.id) && !excludedShopIds.has(shop.id));
+        };
+
         if (unseen.length >= 3) {
             const basePair = pickPairAvoidingHistory(unseen);
             if (basePair) {
@@ -128,19 +140,33 @@ export async function GET(
             }
         } else if (unseen.length === 2) {
             const [first, second] = unseen;
-            const seenCandidates = candidatePool.filter(
+            const excludeIds = new Set([first.id, second.id]);
+            const priorityCandidates = getPriorityCandidates(excludeIds);
+            const fallbackCandidates = candidatePool.filter(
                 shop => shop.id !== first.id && shop.id !== second.id && !excludedShopIds.has(shop.id)
             );
-            const third = pickThird(first, second, seenCandidates);
+            const third = pickThird(
+                first,
+                second,
+                priorityCandidates.length > 0 ? priorityCandidates : fallbackCandidates
+            );
             nextSet = third ? [first, second, third] : null;
         } else if (unseen.length === 1) {
             const first = unseen[0];
-            const seenCandidates = candidatePool.filter(
+            const excludeIds = new Set([first.id]);
+            const priorityCandidates = getPriorityCandidates(excludeIds);
+            const fallbackCandidates = candidatePool.filter(
                 shop => shop.id !== first.id && !excludedShopIds.has(shop.id)
             );
-            const second = selectSingleByGenreBias(userId, seenCandidates, room.votes, candidatePool);
+            const second = selectSingleByGenreBias(
+                userId,
+                priorityCandidates.length > 0 ? priorityCandidates : fallbackCandidates,
+                room.votes,
+                candidatePool
+            );
             if (second) {
-                const remaining = seenCandidates.filter(shop => shop.id !== second.id);
+                const remaining = (priorityCandidates.length > 0 ? priorityCandidates : fallbackCandidates)
+                    .filter(shop => shop.id !== second.id);
                 const third = pickThird(first, second, remaining);
                 nextSet = third ? [first, second, third] : null;
             }
@@ -150,6 +176,9 @@ export async function GET(
             const ratings = computeEloRatings(candidateIds, comparisons, excludedShopIds);
             const topIds = getTopKShopIds(ratings, TOP_TARGET_COUNT);
             const focusIds = getTopKShopIds(ratings, TOP_FOCUS_COUNT);
+            const focusCandidates = candidatePool.filter(
+                shop => focusIds.includes(shop.id) && !excludedShopIds.has(shop.id)
+            );
             const missingTopPairs = getMissingTopPairs(topIds, comparisons);
             const boundaryDelta = getBoundaryDelta(ratings, TOP_TARGET_COUNT);
 
@@ -158,8 +187,8 @@ export async function GET(
                 const shopA = candidatePool.find(shop => shop.id === target.a);
                 const shopB = candidatePool.find(shop => shop.id === target.b);
                 if (shopA && shopB) {
-                    const remaining = candidatePool.filter(
-                        shop => shop.id !== shopA.id && shop.id !== shopB.id && !excludedShopIds.has(shop.id)
+                    const remaining = focusCandidates.filter(
+                        shop => shop.id !== shopA.id && shop.id !== shopB.id
                     );
                     const third = pickThird(shopA, shopB, remaining);
                     nextSet = third ? [shopA, shopB, third] : null;
@@ -175,8 +204,8 @@ export async function GET(
                     const shopA = candidatePool.find(shop => shop.id === target.a);
                     const shopB = candidatePool.find(shop => shop.id === target.b);
                     if (shopA && shopB) {
-                        const remaining = candidatePool.filter(
-                            shop => shop.id !== shopA.id && shop.id !== shopB.id && !excludedShopIds.has(shop.id)
+                        const remaining = focusCandidates.filter(
+                            shop => shop.id !== shopA.id && shop.id !== shopB.id
                         );
                         const third = pickThird(shopA, shopB, remaining);
                         nextSet = third ? [shopA, shopB, third] : null;
@@ -185,10 +214,9 @@ export async function GET(
             }
 
             if (!nextSet) {
-                const seenCandidates = candidatePool.filter(shop => !excludedShopIds.has(shop.id));
-                const basePair = pickPairAvoidingHistory(seenCandidates);
+                const basePair = pickPairAvoidingHistory(focusCandidates);
                 if (basePair) {
-                    const remaining = seenCandidates.filter(
+                    const remaining = focusCandidates.filter(
                         shop => shop.id !== basePair[0].id && shop.id !== basePair[1].id
                     );
                     const third = pickThird(basePair[0], basePair[1], remaining);
