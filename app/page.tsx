@@ -93,9 +93,6 @@ export default function Home() {
           </button>
         </div>
 
-        <div className="text-xs text-[#9aa7c1] text-center">
-          <p>ログイン不要・無料</p>
-        </div>
       </main>
     </div>
   );
