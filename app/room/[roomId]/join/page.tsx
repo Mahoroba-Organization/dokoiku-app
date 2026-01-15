@@ -14,6 +14,8 @@ export default async function JoinPage({ params }: { params: Promise<{ roomId: s
         const totalShops = room?.shops?.length || 0;
         return totalShops > 0 && evaluatedCount >= totalShops;
     }).length;
+    const poolCount = room?.shops?.length || 0;
+    const poolNames = (room?.shops || []).map((shop: any) => shop?.name).filter(Boolean);
     return (
         <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10">
             <div className="w-full max-w-md text-center mb-6">
@@ -24,6 +26,9 @@ export default async function JoinPage({ params }: { params: Promise<{ roomId: s
                 <h2 className="text-lg font-semibold text-[#1c2b52] mb-5">ルームに参加</h2>
                 <div className="text-xs text-[#6b7a99] mb-4">
                     投票完了 {completedCount} / {totalParticipants} 人
+                </div>
+                <div className="text-xs text-[#6b7a99] mb-4">
+                    候補プール: {poolCount} 件
                 </div>
                 <div className="space-y-4">
                     <Link
@@ -48,6 +53,20 @@ export default async function JoinPage({ params }: { params: Promise<{ roomId: s
             </main>
             <div className="w-full max-w-md mt-4">
                 <ShareButton />
+            </div>
+            <div className="w-full max-w-md mt-6 text-xs text-[#6b7a99]">
+                <p className="font-semibold mb-2">候補プール一覧（テスト用）</p>
+                <div className="bg-white/80 border border-[#d9e2f4] rounded-2xl p-3 max-h-48 overflow-y-auto">
+                    {poolNames.length === 0 ? (
+                        <p className="text-[#9aa7c1]">候補がまだありません</p>
+                    ) : (
+                        <ul className="space-y-1">
+                            {poolNames.map((name: string, index: number) => (
+                                <li key={`${name}-${index}`}>{name}</li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
             </div>
         </div>
     );
