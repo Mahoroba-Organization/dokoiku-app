@@ -120,7 +120,7 @@ export default function VotePage() {
             }
 
             if (!optimisticNext) {
-                let nextPair = prefetchedPair;
+                let nextPair: [any, any, any] | null = prefetchedPair;
                 if (!nextPair && prefetchPromiseRef.current) {
                     nextPair = await prefetchPromiseRef.current;
                 }
