@@ -7,7 +7,7 @@ export type Comparison = {
 };
 
 export const ELO_BASE = 1000;
-export const ELO_K = 32;
+export const ELO_K = 48;
 export const TOP_TARGET_COUNT = 5;
 export const TOP_FOCUS_COUNT = 10;
 export const TOP_BOUNDARY_DELTA = 50;
