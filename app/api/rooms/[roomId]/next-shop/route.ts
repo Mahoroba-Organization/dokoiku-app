@@ -79,13 +79,24 @@ export async function GET(
 
         const userVotes = getUserVotes(room.votes, userId);
         const unseen = candidatePool.filter(shop => userVotes[shop.id] === undefined);
+        const evaluatedCount = Object.keys(userVotes).length;
+        if (unseen.length === 0) {
+            return NextResponse.json({
+                shop: null,
+                progress: {
+                    evaluated: evaluatedCount,
+                    total: (room.shops || []).length,
+                    isDecided: false
+                }
+            });
+        }
+
         const nextShop = selectSingleByGenreBias(
             userId,
-            unseen.length > 0 ? unseen : candidatePool,
+            unseen,
             room.votes,
             candidatePool
         );
-        const evaluatedCount = Object.keys(userVotes).length;
 
         return NextResponse.json({
             shop: nextShop,
