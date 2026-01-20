@@ -184,6 +184,7 @@ export default function VotePage() {
             }
         } catch (error) {
             console.error('Vote failed', error);
+        }
     };
 
     const handleAutoSubmit = () => {
