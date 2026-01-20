@@ -11,12 +11,24 @@ export default function Home() {
   const [budgetMin, setBudgetMin] = useState('');
   const [budgetMax, setBudgetMax] = useState('');
   const [loading, setLoading] = useState(false);
+  const budgetOptions = [
+    ...Array.from({ length: 10 }, (_, i) => (i + 1) * 1000),
+    15000,
+    20000,
+    30000,
+    50000,
+    'over'
+  ];
 
   const handleCreateRoom = async () => {
     setLoading(true);
     try {
-      const minValue = budgetMin ? Number(budgetMin) : undefined;
-      const maxValue = budgetMax ? Number(budgetMax) : undefined;
+      const minValue = budgetMin
+        ? (budgetMin === 'over' ? 50000 : Number(budgetMin))
+        : undefined;
+      const maxValue = budgetMax
+        ? (budgetMax === 'over' ? undefined : Number(budgetMax))
+        : undefined;
 
       const res = await fetch('/api/rooms', {
         method: 'POST',
@@ -63,20 +75,30 @@ export default function Home() {
           <div className="space-y-2">
             <label className="block text-sm font-medium text-[#4b5a7a]">予算 (円)</label>
             <div className="grid grid-cols-2 gap-3">
-              <input
-                type="number"
+              <select
                 value={budgetMin}
                 onChange={(e) => setBudgetMin(e.target.value)}
-                placeholder="下限"
-                className="block w-full rounded-xl border border-[#d9e2f4] bg-white p-3 text-sm text-[#1c2b52] placeholder:text-[#9aa7c1] focus:border-[#2f66f6] focus:ring-[#2f66f6]"
-              />
-              <input
-                type="number"
+                className="block w-full rounded-xl border border-[#d9e2f4] bg-white p-3 text-sm text-[#1c2b52] focus:border-[#2f66f6] focus:ring-[#2f66f6]"
+              >
+                <option value="">下限を選択</option>
+                {budgetOptions.map((option) => (
+                  <option key={`min-${option}`} value={option}>
+                    {option === 'over' ? 'それ以上' : option.toLocaleString()}
+                  </option>
+                ))}
+              </select>
+              <select
                 value={budgetMax}
                 onChange={(e) => setBudgetMax(e.target.value)}
-                placeholder="上限"
-                className="block w-full rounded-xl border border-[#d9e2f4] bg-white p-3 text-sm text-[#1c2b52] placeholder:text-[#9aa7c1] focus:border-[#2f66f6] focus:ring-[#2f66f6]"
-              />
+                className="block w-full rounded-xl border border-[#d9e2f4] bg-white p-3 text-sm text-[#1c2b52] focus:border-[#2f66f6] focus:ring-[#2f66f6]"
+              >
+                <option value="">上限を選択</option>
+                {budgetOptions.map((option) => (
+                  <option key={`max-${option}`} value={option}>
+                    {option === 'over' ? 'それ以上' : option.toLocaleString()}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
