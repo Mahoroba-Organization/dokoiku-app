@@ -56,7 +56,7 @@ export default function ResultPage() {
                 <div className="bg-white/90 p-8 rounded-3xl border border-[#d9e2f4] max-w-sm w-full text-center space-y-4 shadow-[0_18px_45px_-30px_rgba(47,102,246,0.45)]">
                     <p className="text-[#1c2b52] font-semibold">まだ十分な評価が集まっていません。</p>
                     <p className="text-sm text-[#6b7a99]">
-                        候補店舗として表示されるには、参加者の3割以上の評価が必要です。
+                        候補店舗として表示されるには、参加者の一定割合の評価が必要です。
                     </p>
                     <Link
                         href={`/room/${roomId}/join`}
