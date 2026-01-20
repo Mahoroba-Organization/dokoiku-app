@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { addVote, addVotes, getRoom, saveRoom } from '@/app/lib/kv';
 import { calculateRanking, checkAutoDecision, getParticipantCount, getMinCommon, CONSECUTIVE_ROUNDS } from '@/app/lib/explore_exploit';
-import { Comparison } from '@/app/lib/elo';
-import { NG_SCORE } from '@/app/lib/vote_constants';
 
 export async function POST(
     request: Request,
@@ -24,33 +22,6 @@ export async function POST(
         return NextResponse.json({ error: 'votes are required' }, { status: 400 });
     }
 
-    const buildComparisons = (items: Array<{ shopId: string; score: number }>): Comparison[] => {
-        const comparisons: Comparison[] = [];
-        if (items.length < 2) return comparisons;
-        for (let i = 0; i < items.length; i += 1) {
-            for (let j = i + 1; j < items.length; j += 1) {
-                const first = items[i];
-                const second = items[j];
-                if (first.score === NG_SCORE && second.score === NG_SCORE) {
-                    comparisons.push({ a: first.shopId, b: second.shopId, result: 'tie' });
-                } else if (first.score === NG_SCORE) {
-                    comparisons.push({ a: first.shopId, b: second.shopId, result: 'b' });
-                } else if (second.score === NG_SCORE) {
-                    comparisons.push({ a: first.shopId, b: second.shopId, result: 'a' });
-                } else if (first.score === second.score) {
-                    comparisons.push({ a: first.shopId, b: second.shopId, result: 'tie' });
-                } else {
-                    comparisons.push(
-                        first.score > second.score
-                            ? { a: first.shopId, b: second.shopId, result: 'a' }
-                            : { a: first.shopId, b: second.shopId, result: 'b' }
-                    );
-                }
-            }
-        }
-        return comparisons;
-    };
-
     try {
         // 投票を保存
         if (voteItems.length === 1) {
@@ -65,18 +36,10 @@ export async function POST(
             return NextResponse.json({ error: 'Room not found' }, { status: 404 });
         }
 
-        // 比較履歴を保存
-        const comparisons = buildComparisons(voteItems);
-        if (comparisons.length > 0) {
-            if (!room.comparisons) room.comparisons = {};
-            if (!room.comparisons[userId]) room.comparisons[userId] = [];
-            room.comparisons[userId].push(...comparisons);
-        }
-
         // ランキング計算
         const participantCount = getParticipantCount(room.votes);
         const minCommon = getMinCommon(participantCount);
-        const ranking = calculateRanking(room.shops, room.votes, room.comparisons, minCommon);
+        const ranking = calculateRanking(room.shops, room.votes, minCommon);
 
         // 順位履歴を更新
         if (!room.rankHistory) {

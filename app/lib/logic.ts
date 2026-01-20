@@ -1,6 +1,7 @@
 
 import { VoteEntry } from './kv';
 import { normalizeVote } from './vote_stats';
+import { BOO_WEIGHT, MAX_TAPS_PER_WINDOW } from './vote_constants';
 
 export type VoteScore = number; // 0 to 100
 
@@ -11,7 +12,7 @@ export type RoomVotes = Record<string, UserVotes>; // userId -> UserVotes
 export const MIN_VOTES_FOR_A = 3;
 export const A_THRESHOLD = 0.7; // Kept for logic if needed, but logic below changes
 export const A_PENALTY = 50.0; // Penalty score for A's dislike
-export const NEGATIVE_SCORE_THRESHOLD = 25; // Scores <= this are considered "No"
+export const NEGATIVE_SCORE_THRESHOLD = 0; // Scores <= this are considered "No"
 
 export interface AAnalysisResult {
     aUserId: string | null;
@@ -40,12 +41,17 @@ export function identifyA(votes: RoomVotes): AAnalysisResult {
 
         const negRate = voteCount > 0 ? badCount / voteCount : 0;
         const avgScore = voteCount > 0 ? totalScore / voteCount : 0;
+        const maxPositive = MAX_TAPS_PER_WINDOW;
+        const minNegative = -BOO_WEIGHT * MAX_TAPS_PER_WINDOW;
+        const normalizedAvgScore = maxPositive === minNegative
+            ? 0.5
+            : Math.min(1, Math.max(0, (avgScore - minNegative) / (maxPositive - minNegative)));
 
         // A-score calculation
         // High Negative Rate = High A Score
         // Low Average Score = High A Score
         // A_score = 0.7 * negRate + 0.3 * (1 - avgScore/100)
-        const aScore = (0.7 * negRate) + (0.3 * (1 - avgScore / 100));
+        const aScore = (0.7 * negRate) + (0.3 * (1 - normalizedAvgScore));
 
         details[userId] = { negRate, avgScore, aScore, voteCount };
 

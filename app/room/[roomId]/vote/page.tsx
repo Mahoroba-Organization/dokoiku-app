@@ -1,24 +1,71 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { BOO_WEIGHT, TAP_WINDOW_SECONDS, WANT_WEIGHT } from '@/app/lib/vote_constants';
+
+type Shop = {
+    id: string;
+    name: string;
+    photo?: { pc?: { l?: string } };
+    genre?: { name?: string };
+    budget?: { name?: string };
+};
+
+type ProgressState = {
+    evaluated: number;
+    total: number;
+    isDecided: boolean;
+    decidedShopId?: string;
+};
 
 export default function VotePage() {
     const params = useParams();
     const roomId = params.roomId as string;
     const router = useRouter();
-    const [currentPair, setCurrentPair] = useState<[any, any, any] | null>(null);
-    const [prefetchedPair, setPrefetchedPair] = useState<[any, any, any] | null>(null);
+
+    const [currentShop, setCurrentShop] = useState<Shop | null>(null);
+    const [prefetchedShop, setPrefetchedShop] = useState<Shop | null>(null);
     const [loading, setLoading] = useState(true);
     const [userId, setUserId] = useState('');
-    const [progress, setProgress] = useState({ evaluated: 0, total: 0, isDecided: false });
-    const prefetchPromiseRef = useRef<Promise<[any, any, any] | null> | null>(null);
+    const [progress, setProgress] = useState<ProgressState>({ evaluated: 0, total: 0, isDecided: false });
+    const [wantCount, setWantCount] = useState(0);
+    const [booCount, setBooCount] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(TAP_WINDOW_SECONDS);
 
-    const PREFER_SCORE = 80;
-    const OTHER_SCORE = 40;
-    const BOTH_WANT_SCORE = 80;
-    const BOTH_MEH_SCORE = 30;
-    const NG_SCORE = -1;
+    const wantCountRef = useRef(0);
+    const booCountRef = useRef(0);
+    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const prefetchPromiseRef = useRef<Promise<Shop | null> | null>(null);
+
+    const resetTapState = () => {
+        setWantCount(0);
+        setBooCount(0);
+        wantCountRef.current = 0;
+        booCountRef.current = 0;
+    };
+
+    const stopTimer = () => {
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
+    };
+
+    const startTimer = () => {
+        stopTimer();
+        const endsAt = Date.now() + TAP_WINDOW_SECONDS * 1000;
+        setTimeLeft(TAP_WINDOW_SECONDS);
+        timerRef.current = setInterval(() => {
+            const remainingMs = Math.max(0, endsAt - Date.now());
+            const remainingSec = Math.ceil(remainingMs / 100) / 10;
+            setTimeLeft(remainingSec);
+            if (remainingMs <= 0) {
+                stopTimer();
+                handleAutoSubmit();
+            }
+        }, 100);
+    };
 
     // Initialize userId
     useEffect(() => {
@@ -30,19 +77,22 @@ export default function VotePage() {
         setUserId(storedUserId);
     }, []);
 
-    function prefetchNextPair(): Promise<[any, any, any] | null> | null {
+    const prefetchNextShop = (): Promise<Shop | null> | null => {
         if (!userId || progress.isDecided) return null;
         if (prefetchPromiseRef.current) return prefetchPromiseRef.current;
 
         const promise = fetch(`/api/rooms/${roomId}/next-shop?userId=${userId}`)
             .then(res => res.json())
             .then(data => {
-                const pair = data.pair || null;
-                setPrefetchedPair(pair);
-                return pair;
+                const shop = data.shop || null;
+                setPrefetchedShop(shop);
+                if (data.progress) {
+                    setProgress(data.progress);
+                }
+                return shop;
             })
             .catch(error => {
-                console.error('Failed to prefetch next pair:', error);
+                console.error('Failed to prefetch next shop:', error);
                 return null;
             })
             .finally(() => {
@@ -51,134 +101,114 @@ export default function VotePage() {
 
         prefetchPromiseRef.current = promise;
         return promise;
-    }
+    };
 
-    // Fetch next pair and progress
-    const fetchNextPair = async (): Promise<[any, any, any] | null> => {
+    const fetchNextShop = async (): Promise<Shop | null> => {
         if (!userId) return null;
-
         setLoading(true);
         try {
             const res = await fetch(`/api/rooms/${roomId}/next-shop?userId=${userId}`);
             const data = await res.json();
-
             setProgress(data.progress);
-
-            if (data.pair) {
-                setCurrentPair(data.pair);
-                prefetchNextPair();
-                return data.pair;
-            } else {
-                // No more shops or decided
-                setCurrentPair(null);
-                return null;
+            if (data.shop) {
+                setCurrentShop(data.shop);
+                prefetchNextShop();
+                return data.shop;
             }
+            setCurrentShop(null);
+            return null;
         } catch (error) {
-            console.error('Failed to fetch next pair:', error);
+            console.error('Failed to fetch next shop:', error);
             return null;
         } finally {
             setLoading(false);
         }
     };
 
-    // Fetch initial shop when userId is ready
     useEffect(() => {
         if (userId) {
-            fetchNextPair();
+            fetchNextShop();
         }
     }, [userId, roomId]);
 
     useEffect(() => {
-        if (currentPair) {
-            prefetchNextPair();
+        if (currentShop) {
+            resetTapState();
+            startTimer();
+            prefetchNextShop();
+        } else {
+            stopTimer();
         }
-    }, [currentPair, userId, roomId]);
+        return () => {
+            stopTimer();
+        };
+    }, [currentShop]);
 
-    const submitVotes = async (votes: Array<{ shopId: string; score: number }>) => {
-        const optimisticNext = prefetchedPair;
+    const submitVotes = async (shop: Shop, score: number) => {
+
+        const optimisticNext = prefetchedShop;
         if (optimisticNext) {
-            setCurrentPair(optimisticNext);
-            setPrefetchedPair(null);
-            prefetchNextPair();
+            setCurrentShop(optimisticNext);
+            setPrefetchedShop(null);
+            prefetchNextShop();
         }
 
         try {
             const res = await fetch(`/api/rooms/${roomId}/vote`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, votes }),
+                body: JSON.stringify({ userId, shopId: shop.id, score }),
             });
 
             const data = await res.json();
 
-            // Check if auto-decided
             if (data.isDecided) {
-                setProgress(prev => ({ ...prev, isDecided: true }));
-                setCurrentPair(null);
-                setPrefetchedPair(null);
+                setProgress(prev => ({ ...prev, isDecided: true, decidedShopId: data.decidedShopId }));
+                setCurrentShop(null);
+                setPrefetchedShop(null);
                 return;
             }
 
             if (!optimisticNext) {
-                let nextPair: [any, any, any] | null = prefetchedPair;
-                if (!nextPair && prefetchPromiseRef.current) {
-                    nextPair = await prefetchPromiseRef.current;
+                let nextShop: Shop | null = prefetchedShop;
+                if (!nextShop && prefetchPromiseRef.current) {
+                    nextShop = await prefetchPromiseRef.current;
                 }
 
-                if (nextPair) {
-                    setCurrentPair(nextPair);
-                    setPrefetchedPair(null);
+                if (nextShop) {
+                    setCurrentShop(nextShop);
+                    setPrefetchedShop(null);
                 } else {
-                    fetchNextPair();
+                    await fetchNextShop();
                 }
             }
         } catch (error) {
             console.error('Vote failed', error);
-        }
     };
 
-    const handleBothMeh = () => {
-        if (!currentPair) return;
-        submitVotes([
-            { shopId: currentPair[0].id, score: BOTH_MEH_SCORE },
-            { shopId: currentPair[1].id, score: BOTH_MEH_SCORE },
-            { shopId: currentPair[2].id, score: BOTH_MEH_SCORE }
-        ]);
+    const handleAutoSubmit = () => {
+        if (!currentShop) return;
+        const score = wantCountRef.current * WANT_WEIGHT - booCountRef.current * BOO_WEIGHT;
+        submitVotes(currentShop, score);
     };
 
-    const handleBothWant = () => {
-        if (!currentPair) return;
-        submitVotes([
-            { shopId: currentPair[0].id, score: BOTH_WANT_SCORE },
-            { shopId: currentPair[1].id, score: BOTH_WANT_SCORE },
-            { shopId: currentPair[2].id, score: BOTH_WANT_SCORE }
-        ]);
+    const handleWantTap = () => {
+        if (!currentShop || timeLeft <= 0) return;
+        wantCountRef.current += 1;
+        setWantCount(wantCountRef.current);
     };
 
-    const handlePickBest = (index: number) => {
-        if (!currentPair) return;
-        const votes = currentPair.map((shop, i) => ({
-            shopId: shop.id,
-            score: i === index ? PREFER_SCORE : OTHER_SCORE
-        }));
-        submitVotes(votes);
+    const handleBooTap = () => {
+        if (!currentShop || timeLeft <= 0) return;
+        booCountRef.current += 1;
+        setBooCount(booCountRef.current);
     };
 
-    const handleNg = (index: number) => {
-        if (!currentPair) return;
-        const votes = currentPair.map((shop, i) => ({
-            shopId: shop.id,
-            score: i === index ? NG_SCORE : OTHER_SCORE
-        }));
-        submitVotes(votes);
-    };
-
-    if (loading && !currentPair) {
+    if (loading && !currentShop) {
         return <div className="min-h-screen flex items-center justify-center">読み込み中...</div>;
     }
 
-    // Completion screen
-    if (!currentPair) {
+    if (!currentShop) {
         const message = progress.isDecided
             ? '自動決定されました！'
             : '全ての店舗を評価しました！';
@@ -212,13 +242,11 @@ export default function VotePage() {
         );
     }
 
-    const shops = currentPair;
     const hasCompletedAll = progress.total > 0 && progress.evaluated >= progress.total;
 
     return (
         <div className="min-h-screen flex flex-col select-none">
-            {/* Header */}
-            <header className="p-4 z-10">
+            <header className="p-4 z-10 flex flex-col gap-2">
                 <button
                     onClick={() => router.push(`/room/${roomId}/join`)}
                     className="text-xs font-semibold text-[#6b7a99] hover:text-[#1c2b52] flex items-center cursor-pointer"
@@ -226,69 +254,55 @@ export default function VotePage() {
                     ← ルームへ
                 </button>
                 {hasCompletedAll && (
-                    <div className="mt-3 text-xs font-semibold text-[#2f66f6]">
+                    <div className="text-xs font-semibold text-[#2f66f6]">
                         30件の確認が完了しました
                     </div>
                 )}
             </header>
 
-            {/* Main Card Area */}
-            <main className="flex-1 flex flex-col p-4 max-w-5xl mx-auto w-full h-full justify-center">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {shops.map((shop: any, index: number) => (
-                        <div
-                            key={shop.id}
-                            className="bg-white/90 rounded-3xl overflow-hidden border border-[#d9e2f4] flex flex-col relative shadow-[0_18px_45px_-30px_rgba(47,102,246,0.45)]"
-                        >
-                            <div className="h-44 bg-[#f2f5ff] relative">
-                                {shop.photo?.pc?.l ? (
-                                    <img src={shop.photo.pc.l} alt={shop.name} className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-[#9aa7c1]">No Image</div>
-                                )}
-                                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
-                                    <h2 className="text-white font-bold text-lg leading-tight shadow-sm">{shop.name}</h2>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => handleNg(index)}
-                                className="absolute right-3 top-3 border border-[#2f66f6] bg-white text-[#2f66f6] text-xs px-2 py-1 rounded-full font-semibold shadow-sm cursor-pointer"
-                            >
-                                NG
-                            </button>
-
-                            <div className="flex-1 p-4 flex flex-col justify-between">
-                                <div>
-                                    <p className="text-[#6b7a99] text-sm mb-1">{shop.genre?.name}</p>
-                                    <p className="text-[#1c2b52] font-semibold mb-4">{shop.budget?.name}</p>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <button
-                                        onClick={() => handlePickBest(index)}
-                                        className="w-full bg-[#2f66f6] text-white py-3 rounded-2xl font-bold shadow-[0_14px_30px_-18px_rgba(47,102,246,0.8)] transform transition active:scale-95 text-sm cursor-pointer"
-                                    >
-                                        こっちがいい
-                                    </button>
-                                </div>
-                            </div>
+            <main className="flex-1 flex flex-col p-4 max-w-3xl mx-auto w-full h-full justify-center gap-6">
+                <div className="bg-white/90 rounded-3xl overflow-hidden border border-[#d9e2f4] shadow-[0_18px_45px_-30px_rgba(47,102,246,0.45)]">
+                    <div className="h-56 bg-[#f2f5ff] relative">
+                        {currentShop.photo?.pc?.l ? (
+                            <img src={currentShop.photo.pc.l} alt={currentShop.name} className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[#9aa7c1]">No Image</div>
+                        )}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+                            <h2 className="text-white font-bold text-xl leading-tight shadow-sm">{currentShop.name}</h2>
                         </div>
-                    ))}
-                </div>
+                    </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                    <button
-                        onClick={handleBothMeh}
-                        className="w-full border border-[#2f66f6] text-[#2f66f6] py-3 rounded-2xl font-semibold transform transition active:scale-95 text-sm bg-white cursor-pointer"
-                    >
-                        どっちも微妙
-                    </button>
-                    <button
-                        onClick={handleBothWant}
-                        className="w-full bg-[#2f66f6] text-white py-3 rounded-2xl font-bold shadow-[0_14px_30px_-18px_rgba(47,102,246,0.8)] transform transition active:scale-95 text-sm cursor-pointer"
-                    >
-                        どっちも行きたい
-                    </button>
+                    <div className="p-5 flex flex-col gap-4">
+                        <div>
+                            <p className="text-[#6b7a99] text-sm">{currentShop.genre?.name}</p>
+                            <p className="text-[#1c2b52] font-semibold">{currentShop.budget?.name}</p>
+                        </div>
+
+                        <div className="bg-[#f6f8ff] border border-[#d9e2f4] rounded-2xl px-4 py-3 flex items-center justify-between text-sm">
+                            <span className="text-[#6b7a99]">残り時間</span>
+                            <span className="font-bold text-[#2f66f6]">{timeLeft.toFixed(1)}s</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={handleWantTap}
+                                disabled={timeLeft <= 0}
+                                className="w-full bg-[#2f66f6] text-white py-4 rounded-2xl font-bold shadow-[0_14px_30px_-18px_rgba(47,102,246,0.8)] transform transition active:scale-95 text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                行きたい
+                                <span className="block text-xs font-semibold mt-1">+{wantCount}</span>
+                            </button>
+                            <button
+                                onClick={handleBooTap}
+                                disabled={timeLeft <= 0}
+                                className="w-full border border-[#2f66f6] text-[#2f66f6] py-4 rounded-2xl font-bold transform transition active:scale-95 text-sm bg-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                ぶー
+                                <span className="block text-xs font-semibold mt-1">-{booCount * BOO_WEIGHT}</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </main>
         </div>
