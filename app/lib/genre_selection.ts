@@ -8,7 +8,7 @@ export type Shop = {
     [key: string]: any;
 };
 
-export const CANDIDATE_POOL_SIZE = 30;
+export const CANDIDATE_POOL_SIZE = 50;
 export const NEGATIVE_SCORE_THRESHOLD = 30;
 export const POSITIVE_SCORE_THRESHOLD = 70;
 export const USER_NEG_WEIGHT = 0.35;

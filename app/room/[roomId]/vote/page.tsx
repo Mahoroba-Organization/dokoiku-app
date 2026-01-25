@@ -256,7 +256,7 @@ export default function VotePage() {
                 </button>
                 {hasCompletedAll && (
                     <div className="text-xs font-semibold text-[#2f66f6]">
-                        30件の確認が完了しました
+                        {progress.total > 0 ? `${progress.total}件の確認が完了しました` : '全件の確認が完了しました'}
                     </div>
                 )}
             </header>
