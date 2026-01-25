@@ -16,6 +16,7 @@ export default async function JoinPage({ params }: { params: Promise<{ roomId: s
     }).length;
     const poolCount = room?.shops?.length || 0;
     const poolNames = (room?.shops || []).map((shop: any) => shop?.name).filter(Boolean);
+    const fetchMeta = room?.fetchMeta;
     return (
         <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10">
             <div className="w-full max-w-md text-center mb-6">
@@ -30,6 +31,15 @@ export default async function JoinPage({ params }: { params: Promise<{ roomId: s
                 <div className="text-xs text-[#6b7a99] mb-4">
                     候補プール: {poolCount} 件
                 </div>
+                {fetchMeta && (
+                    <div className="text-xs text-[#6b7a99] mb-4 space-y-1">
+                        <div>取得件数: {fetchMeta.fetchedCount} 件</div>
+                        <div>予算フィルタ後: {fetchMeta.filteredCount} 件</div>
+                        <div>最終プール: {fetchMeta.candidatePoolCount} 件</div>
+                        <div>予算コード使用: {fetchMeta.budgetFilterUsed ? 'あり' : 'なし'}</div>
+                        <div>フォールバック使用: {fetchMeta.fallbackUsed ? 'あり' : 'なし'}</div>
+                    </div>
+                )}
                 <div className="space-y-4">
                     <Link
                         href={`/room/${roomId}/vote`}

@@ -13,6 +13,15 @@ export type RoomData = {
     shops: any[];
     votes: RoomVotes;
     participants: string[];
+    fetchMeta?: {
+        fetchedCount: number;
+        filteredCount: number;
+        candidatePoolCount: number;
+        budgetCodes: string[];
+        budgetFilterUsed: boolean;
+        fallbackUsed: boolean;
+        range?: { min: number; max: number } | null;
+    };
     // Explore-Exploit Algorithm Fields
     rankHistory?: Array<{
         timestamp: number;

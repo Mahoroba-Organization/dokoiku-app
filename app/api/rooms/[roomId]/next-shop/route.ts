@@ -66,13 +66,24 @@ export async function GET(
             };
 
             let fetchedShops = await fetchShops(params);
+            let fallbackUsed = false;
             if (budgetCodes.length > 0 && fetchedShops.length === 0) {
                 params.delete('budget');
                 fetchedShops = await fetchShops(params);
+                fallbackUsed = true;
             }
 
             const filteredFetched = filterShopsByBudgetRange(fetchedShops, range);
             candidatePool = filteredFetched.length >= 2 ? filteredFetched : fetchedShops;
+            room.fetchMeta = {
+                fetchedCount: fetchedShops.length,
+                filteredCount: filteredFetched.length,
+                candidatePoolCount: candidatePool.length,
+                budgetCodes,
+                budgetFilterUsed: budgetCodes.length > 0 && !fallbackUsed,
+                fallbackUsed,
+                range: range ? { min: range.min, max: range.max } : null
+            };
             room.shops = candidatePool;
             await saveRoom(roomId, room);
         }
