@@ -254,6 +254,12 @@ export default function VotePage() {
                 >
                     ← ルームへ
                 </button>
+                {progress.total > 0 && (
+                    <div className="text-xs text-[#6b7a99] flex items-center justify-between">
+                        <span>あなたの進捗: {progress.evaluated} / {progress.total}</span>
+                        <span>残り {Math.max(0, progress.total - progress.evaluated)} 件</span>
+                    </div>
+                )}
                 {hasCompletedAll && (
                     <div className="text-xs font-semibold text-[#2f66f6]">
                         {progress.total > 0 ? `${progress.total}件の確認が完了しました` : '全件の確認が完了しました'}
