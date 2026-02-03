@@ -41,6 +41,13 @@ export async function POST(
         const minCommon = getMinCommon(participantCount);
         const ranking = calculateRanking(room.shops, room.votes, minCommon);
 
+        const totalShops = room.shops?.length || 0;
+        const participantIds = Object.keys(room.votes || {});
+        const allCompleted = totalShops > 0
+            && participantIds.length > 0
+            && participantIds.every(id => Object.keys(room.votes[id] || {}).length >= totalShops);
+        room.isVotingComplete = allCompleted;
+
         // 順位履歴を更新
         if (!room.rankHistory) {
             room.rankHistory = [];
@@ -76,7 +83,8 @@ export async function POST(
         return NextResponse.json({
             success: true,
             isDecided: room.isDecided,
-            decidedShopId: room.decidedShopId
+            decidedShopId: room.decidedShopId,
+            isVotingComplete: room.isVotingComplete
         });
     } catch (error) {
         console.error('Vote failed:', error);

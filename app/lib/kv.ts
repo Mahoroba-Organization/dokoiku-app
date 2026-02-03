@@ -33,6 +33,7 @@ export type RoomData = {
     comparisons?: Record<string, Array<{ a: string; b: string; result: 'a' | 'b' | 'tie' }>>;
     isDecided?: boolean;
     decidedShopId?: string;
+    isVotingComplete?: boolean;
 };
 
 const ROOM_TTL = 60 * 60 * 24; // 24 hours

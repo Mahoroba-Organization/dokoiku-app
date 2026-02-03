@@ -32,6 +32,7 @@ export async function GET(
                     evaluated: Object.keys(room.votes[userId] || {}).length,
                     total: room.shops.length,
                     isDecided: true,
+                    isVotingComplete: room.isVotingComplete || false,
                     decidedShopId: room.decidedShopId
                 }
             });
@@ -97,7 +98,8 @@ export async function GET(
                 progress: {
                     evaluated: evaluatedCount,
                     total: (room.shops || []).length,
-                    isDecided: false
+                    isDecided: false,
+                    isVotingComplete: room.isVotingComplete || false
                 }
             });
         }
@@ -114,7 +116,8 @@ export async function GET(
             progress: {
                 evaluated: evaluatedCount,
                 total: (room.shops || []).length,
-                isDecided: false
+                isDecided: false,
+                isVotingComplete: room.isVotingComplete || false
             }
         });
     } catch (error) {

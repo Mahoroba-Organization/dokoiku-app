@@ -37,6 +37,7 @@ export async function GET(
         candidates,
         isDecided: room.isDecided || false,
         decidedShopId: room.decidedShopId,
+        isVotingComplete: room.isVotingComplete || false,
         aAnalysis: {
             exists: !!aAnalysis.aUserId,
             maxAScore: aAnalysis.maxAScore,
