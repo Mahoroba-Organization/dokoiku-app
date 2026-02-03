@@ -61,13 +61,37 @@ export async function GET(
                 return data?.results?.shop || [];
             };
 
-            const fetchedShops = await fetchShops(params);
+            const targetCount = 20;
+            const maxPages = 4;
+            const fetchedShops: Shop[] = [];
+            const filteredShops: Shop[] = [];
+            const seenIds = new Set<string>();
+            let page = 0;
 
-            const filteredFetched = filterShopsByBudgetRange(fetchedShops, range);
-            candidatePool = filteredFetched.length >= 2 ? filteredFetched : fetchedShops;
+            while (page < maxPages && filteredShops.length < targetCount) {
+                const start = page * CANDIDATE_POOL_SIZE + 1;
+                params.set('start', String(start));
+                const pageShops = await fetchShops(params);
+                fetchedShops.push(...pageShops);
+
+                const filteredPage = filterShopsByBudgetRange(pageShops, range);
+                filteredPage.forEach(shop => {
+                    if (!seenIds.has(shop.id)) {
+                        seenIds.add(shop.id);
+                        filteredShops.push(shop);
+                    }
+                });
+
+                if (pageShops.length < CANDIDATE_POOL_SIZE) {
+                    break;
+                }
+                page += 1;
+            }
+
+            candidatePool = filteredShops.length >= 2 ? filteredShops : fetchedShops;
             room.fetchMeta = {
                 fetchedCount: fetchedShops.length,
-                filteredCount: filteredFetched.length,
+                filteredCount: filteredShops.length,
                 candidatePoolCount: candidatePool.length,
                 budgetCodes: [],
                 budgetFilterUsed: false,
