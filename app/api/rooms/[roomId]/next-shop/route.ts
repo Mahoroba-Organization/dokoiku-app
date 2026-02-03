@@ -48,17 +48,12 @@ export async function GET(
             }
 
             const range = normalizeBudgetRange(room.conditions?.budgetMin, room.conditions?.budgetMax);
-            const budgetCodes = getBudgetCodesForRange(range);
-
             const params = new URLSearchParams({
                 key: apiKey,
                 keyword: room.conditions?.area || '',
                 format: 'json',
                 count: String(CANDIDATE_POOL_SIZE),
             });
-            if (budgetCodes.length > 0) {
-                params.set('budget', budgetCodes.join(','));
-            }
 
             const fetchShops = async (query: URLSearchParams): Promise<Shop[]> => {
                 const response = await fetch(`${HOTPEPPER_API_ENDPOINT}?${query.toString()}`);
@@ -66,13 +61,7 @@ export async function GET(
                 return data?.results?.shop || [];
             };
 
-            let fetchedShops = await fetchShops(params);
-            let fallbackUsed = false;
-            if (budgetCodes.length > 0 && fetchedShops.length === 0) {
-                params.delete('budget');
-                fetchedShops = await fetchShops(params);
-                fallbackUsed = true;
-            }
+            const fetchedShops = await fetchShops(params);
 
             const filteredFetched = filterShopsByBudgetRange(fetchedShops, range);
             candidatePool = filteredFetched.length >= 2 ? filteredFetched : fetchedShops;
@@ -80,9 +69,9 @@ export async function GET(
                 fetchedCount: fetchedShops.length,
                 filteredCount: filteredFetched.length,
                 candidatePoolCount: candidatePool.length,
-                budgetCodes,
-                budgetFilterUsed: budgetCodes.length > 0 && !fallbackUsed,
-                fallbackUsed,
+                budgetCodes: [],
+                budgetFilterUsed: false,
+                fallbackUsed: false,
                 range: range ? { min: range.min, max: range.max } : null
             };
             room.shops = candidatePool;
